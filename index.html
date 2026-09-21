@@ -405,7 +405,7 @@ const weaponDefs=[{name:'빛의 검',cool:.32,damage:2},{name:'달빛 활',cool:
 function enemyHit(e,amount,from,flavor='sword'){
  if(!e.alive)return;
  e.hp-=amount;e.hit=.22;shake=Math.min(9,shake+2.2);
- floatText.push({x:e.x,y:e.y-22,label:String(amount),color:flavor==='staff'?'#b9c0ff':'#f9e6b2',life:.66});
+ floatText.push({x:e.x,y:e.y-(e.kind.startsWith('boss')?98:22),label:String(amount),color:flavor==='staff'?'#b9c0ff':'#f9e6b2',life:.66});
  particlesAt(e.x,e.y,8,flavor==='bow'?'#ffe2ac':'#aef5e1',100);
  if(e.kind!=='thorn')e.x=clamp(e.x+from*12,e.lo,e.hi);
  if(e.hp<=0){e.alive=false;if(e.kind.startsWith('boss'))bossDefeated(e);kills++;particlesAt(e.x,e.y,30,e.kind==='thorn'?'#c4e9a9':'#b1c3ff',155);sound(170,.24,'triangle',.07);if(kills%6===0&&p.hp<p.maxHp){p.hp++;note('정령의 힘으로 체력 +1',2);particlesAt(p.x+12,p.y+14,26,'#c9ffd8',145)}hud()}
@@ -997,8 +997,8 @@ function bossDefeated(b){
 }
 // Runtime effects are drawn over detailed PNG art, rather than standing in for scenery.
 drawBossRoot=function(e,y){const im=illustratedBossArt.root;if(!im.complete||!im.naturalWidth)return;ctx.save();ctx.translate(e.x,y);ctx.scale(e.face,1);glow(0,-20,115,'rgba(125,255,187,ALPHA)',.12);ctx.drawImage(im,-107,-151,214,186);if(e.windup>0)glow(0,-28,64,'rgba(255,223,154,ALPHA)',.22);if(e.hit>0){ctx.globalAlpha=e.hit*.9;ctx.fillStyle='#f5ffe9';ctx.globalCompositeOperation='screen';ctx.drawImage(im,-107,-151,214,186)}ctx.restore()};
-drawBossWatcher=function(e,y){const im=illustratedBossArt.watcher;if(!im.complete||!im.naturalWidth)return;ctx.save();ctx.translate(e.x,y);glow(0,-25,95,'rgba(180,205,255,ALPHA)',.16);ctx.drawImage(im,-96,-128,192,203);if(e.windup>0)glow(0,-9,72,'rgba(255,242,200,ALPHA)',.35);ctx.restore()};
-drawBossShade=function(e,y){const im=illustratedBossArt.shade;if(!im.complete||!im.naturalWidth)return;ctx.save();ctx.translate(e.x,y);ctx.scale(e.face,1);glow(0,-35,116,'rgba(181,98,255,ALPHA)',.16);ctx.drawImage(im,-104,-136,208,185);if(e.windup>0)glow(0,-30,72,'rgba(224,154,255,ALPHA)',.32);ctx.restore()};
+drawBossWatcher=function(e,y){const im=illustratedBossArt.watcher;if(!im.complete||!im.naturalWidth)return;ctx.save();ctx.translate(e.x,y);glow(0,-25,95,'rgba(180,205,255,ALPHA)',.16);ctx.drawImage(im,-96,-128,192,203);if(e.windup>0)glow(0,-9,72,'rgba(255,242,200,ALPHA)',.35);if(e.hit>0){glow(0,-24,105,'rgba(225,240,255,ALPHA)',Math.min(.34,e.hit));ctx.globalCompositeOperation='screen';ctx.globalAlpha=Math.min(.5,e.hit*2.1);ctx.drawImage(im,-96,-128,192,203)}ctx.restore()};
+drawBossShade=function(e,y){const im=illustratedBossArt.shade;if(!im.complete||!im.naturalWidth)return;ctx.save();ctx.translate(e.x,y);ctx.scale(e.face,1);glow(0,-35,116,'rgba(181,98,255,ALPHA)',.16);ctx.drawImage(im,-104,-136,208,185);if(e.windup>0)glow(0,-30,72,'rgba(224,154,255,ALPHA)',.32);if(e.hit>0){glow(0,-30,116,'rgba(230,185,255,ALPHA)',Math.min(.34,e.hit));ctx.globalCompositeOperation='screen';ctx.globalAlpha=Math.min(.5,e.hit*2.1);ctx.drawImage(im,-104,-136,208,185)}ctx.restore()};
 waterfall=function(cx,top,depth){
  if(cx<camX-170||cx>camX+W+170)return;
  const im=illustratedBossArt.waterfall,w=154+Math.sin(cx*.07)*9;
