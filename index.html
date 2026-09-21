@@ -74,100 +74,159 @@ const input={left:false,right:false,jump:false,dash:false,pulse:false,attack:fal
 function rng(seed){let s=seed>>>0;return()=>((s=(s*1664525+1013904223)>>>0)/4294967296)}const random=rng(424234);
 const clamp=(a,b,c)=>Math.max(b,Math.min(c,a));
 function sound(f=440,d=.09,type='sine',volume=.055){if(!soundOn)return;try{if(!audio)audio=new (window.AudioContext||window.webkitAudioContext)();if(audio.state==='suspended')audio.resume();const o=audio.createOscillator(),g=audio.createGain(),now=audio.currentTime;o.type=type;o.frequency.setValueAtTime(f,now);o.frequency.exponentialRampToValueAtTime(Math.max(80,f*.65),now+d);g.gain.setValueAtTime(volume,now);g.gain.exponentialRampToValueAtTime(.0001,now+d);o.connect(g);g.connect(audio.destination);o.start(now);o.stop(now+d+.012)}catch(e){}}
-// WILDLIGHT SOUNDTRACK v2.4 — slower, layered ambient score with natural decay and a separate combat pulse.
-// All audio is generated locally with Web Audio; no external samples, music APIs or licenses required.
+// WILDLIGHT SOUNDTRACK v3.0 — original, self-contained adaptive score.
+// Each biome keeps a recognisable leitmotif but has its own tempo-independent
+// melodic contour, voicing and timbre. No API, audio files or network access.
 const scoreModes=[
- {root:196,scale:[0,2,3,7,9,12,14,15],name:'달빛이 깨어나는 숲'},
- {root:174.61,scale:[0,2,5,7,10,12,14,17],name:'잊힌 뿌리의 회랑'},
- {root:220,scale:[0,3,5,7,10,12,15,17],name:'이끼 낀 별의 사원'},
- {root:164.81,scale:[0,2,5,7,9,12,14,17],name:'안개 아래 잠든 강'},
- {root:261.63,scale:[0,2,4,7,9,12,14,16],name:'새벽의 마지막 성역'}
+ {root:196,scale:[0,2,3,7,9,12,14,15],name:'달빛이 깨어나는 숲',lead:[0,null,2,null,4,3,null,null,2,null,1,null,3,null,null,null],chords:[0,3,5,2],tone:'flute',air:0.85},
+ {root:174.61,scale:[0,2,5,7,10,12,14,17],name:'잊힌 뿌리의 회랑',lead:[0,null,null,1,2,null,4,null,3,null,null,1,0,null,null,null],chords:[0,2,4,1],tone:'wood',air:1},
+ {root:220,scale:[0,3,5,7,10,12,15,17],name:'이끼 낀 별의 사원',lead:[0,null,2,4,null,3,null,1,2,null,5,null,4,null,2,null],chords:[0,4,2,5],tone:'bell',air:0.5},
+ {root:164.81,scale:[0,2,5,7,9,12,14,17],name:'안개 아래 잠든 강',lead:[0,null,null,2,null,1,null,null,4,null,3,null,2,null,null,null],chords:[0,2,1,3],tone:'flute',air:0.65},
+ {root:261.63,scale:[0,2,4,7,9,12,14,16],name:'새벽의 마지막 성역',lead:[0,2,null,4,3,null,2,null,4,5,null,3,2,null,0,null],chords:[0,3,5,4],tone:'strings',air:0.9}
 ];
 let musicRunning=false,musicWet=null,musicPhrase=0;
-function ensureAudio(){try{if(!audio)audio=new(window.AudioContext||window.webkitAudioContext)();if(audio.state==='suspended')audio.resume();return true}catch(_){return false}}
+let musicBuses=null,musicEnv=null,musicMixAt=0,musicNoiseSource=null,musicNoiseWater=null;
+function ensureAudio(){
+ try{
+  if(!audio)audio=new(window.AudioContext||window.webkitAudioContext)();
+  if(audio.state==='suspended')audio.resume();
+  return true;
+ }catch(_){return false}
+}
 function setupMusicBus(){
  if(musicGain)return;
  musicGain=audio.createGain();musicGain.gain.value=.00001;musicGain.connect(audio.destination);
- // A short quiet room tail blends the individual notes instead of leaving exposed oscillator beeps.
- const length=Math.round(audio.sampleRate*1.15),impulse=audio.createBuffer(2,length,audio.sampleRate);
- for(let ch=0;ch<2;ch++){const data=impulse.getChannelData(ch);for(let i=0;i<length;i++){const fade=Math.pow(1-i/length,2.8);data[i]=(Math.random()*2-1)*fade*.28}}
+ const length=Math.round(audio.sampleRate*.85),impulse=audio.createBuffer(2,length,audio.sampleRate);
+ for(let ch=0;ch<2;ch++){const data=impulse.getChannelData(ch);for(let i=0;i<length;i++)data[i]=(Math.random()*2-1)*Math.pow(1-i/length,3)*.21}
  const reverb=audio.createConvolver();reverb.buffer=impulse;
- musicWet=audio.createGain();musicWet.gain.value=.16;
+ musicWet=audio.createGain();musicWet.gain.value=.14;
  musicGain.connect(reverb);reverb.connect(musicWet);musicWet.connect(audio.destination);
+ musicBuses=Array.from({length:6},()=>{
+  const gain=audio.createGain();gain.gain.value=.00001;gain.connect(musicGain);return gain;
+ });
+ // Two softly filtered noise beds supply wind and water without music samples.
+ const noise=audio.createBuffer(1,Math.round(audio.sampleRate*3),audio.sampleRate);
+ const data=noise.getChannelData(0);let smooth=0;
+ for(let i=0;i<data.length;i++){smooth=.985*smooth+.015*(Math.random()*2-1);data[i]=smooth}
+ musicEnv=[];
+ const makeBed=(type,freq)=>{
+  const source=audio.createBufferSource(),filter=audio.createBiquadFilter(),gain=audio.createGain();
+  source.buffer=noise;source.loop=true;filter.type=type;filter.frequency.value=freq;
+  gain.gain.value=.00001;source.connect(filter);filter.connect(gain);gain.connect(musicGain);
+  source.start();musicEnv.push(gain);return source;
+ };
+ musicNoiseSource=makeBed('lowpass',580);
+ musicNoiseWater=makeBed('highpass',180);
 }
 function stopMusic(){
- musicRunning=false;musicNext=0;
- if(musicGain&&audio){musicGain.gain.cancelScheduledValues(audio.currentTime);musicGain.gain.setTargetAtTime(.00001,audio.currentTime,.2)}
+ musicRunning=false;musicNext=0;musicBeat=0;
+ if(musicGain&&audio)musicGain.gain.setTargetAtTime(.00001,audio.currentTime,.23);
 }
 function startMusic(){
  if(!musicOn||!ensureAudio())return;
  setupMusicBus();
- if(!musicRunning){musicRunning=true;musicNext=audio.currentTime+.09;if(!musicBeat)musicPhrase=0}
- musicGain.gain.cancelScheduledValues(audio.currentTime);
- musicGain.gain.setTargetAtTime(musicVolume*.72,audio.currentTime,.45);
+ if(!musicRunning){musicRunning=true;musicNext=audio.currentTime+.10;musicBeat=0;musicMixAt=0}
+ musicGain.gain.setTargetAtTime(musicVolume*.62,audio.currentTime,.65);
 }
-function musicVoice(freq,start,len,loud,kind='sine',attack=.09,cutoff=1500){
- if(!audio||!musicGain||!Number.isFinite(freq)||start<0)return;
+function musicPitch(sc,index,oct=0){
+ const n=sc.scale.length,k=((index%n)+n)%n;
+ return sc.root*Math.pow(2,(sc.scale[k]+12*Math.floor(index/n)+12*oct)/12);
+}
+function musicVoice(freq,start,len,loud,kind='sine',attack=.09,cutoff=1500,bus=null){
+ if(!audio||!musicGain||!Number.isFinite(freq)||!bus||start<0)return;
  const osc=audio.createOscillator(),filter=audio.createBiquadFilter(),gain=audio.createGain();
- osc.type=kind;osc.frequency.setValueAtTime(freq,start);
- filter.type='lowpass';filter.frequency.value=cutoff;filter.Q.value=.15;
- const end=start+Math.max(len,.24),rise=Math.min(Math.max(attack,.04),len*.4),release=Math.min(.6,len*.38);
+ const actualKind=kind==='wood'||kind==='strings'?'triangle':'sine';
+ osc.type=actualKind;osc.frequency.setValueAtTime(freq,start);
+ filter.type='lowpass';filter.frequency.value=cutoff;filter.Q.value=.3;
+ const end=start+Math.max(.18,len),rise=Math.min(Math.max(attack,.025),len*.38);
+ const release=Math.min(.78,Math.max(.16,len*.33));
  gain.gain.setValueAtTime(.0001,start);
  gain.gain.linearRampToValueAtTime(Math.max(.0002,loud),start+rise);
  gain.gain.setValueAtTime(Math.max(.0002,loud),Math.max(start+rise,end-release));
  gain.gain.exponentialRampToValueAtTime(.0001,end);
- osc.connect(filter);filter.connect(gain);gain.connect(musicGain);
+ osc.connect(filter);filter.connect(gain);gain.connect(bus);
  osc.start(start);osc.stop(end+.04);
-}
-function musicPitch(sc,index,oct=0){
- const count=sc.scale.length,slot=((index%count)+count)%count;
- return sc.root*Math.pow(2,(sc.scale[slot]+12*Math.floor(index/count)+12*oct)/12);
+ if(kind==='bell'||kind==='strings'){
+  const harmonic=audio.createOscillator(),harmGain=audio.createGain();
+  harmonic.type=kind==='bell'?'sine':'triangle';
+  harmonic.frequency.setValueAtTime(freq*(kind==='bell'?2:1.005),start);
+  if(kind==='strings')harmonic.detune.value=5;
+  harmGain.gain.setValueAtTime(.0001,start);
+  harmGain.gain.linearRampToValueAtTime(loud*(kind==='bell'?.20:.16),start+rise);
+  harmGain.gain.exponentialRampToValueAtTime(.0001,end);
+  harmonic.connect(harmGain);harmGain.connect(bus);
+  harmonic.start(start);harmonic.stop(end+.04);
+ }
 }
 function musicPulse(start,beat){
- if(!audio||!musicGain)return;
+ if(!audio||!musicGain||!musicBuses)return;
  const osc=audio.createOscillator(),gain=audio.createGain();
- osc.type='sine';osc.frequency.setValueAtTime(112,start);
- osc.frequency.exponentialRampToValueAtTime(48,start+.23);
+ osc.type='sine';osc.frequency.setValueAtTime(102,start);
+ osc.frequency.exponentialRampToValueAtTime(43,start+.32);
  gain.gain.setValueAtTime(.0001,start);
- gain.gain.linearRampToValueAtTime(beat===0?.036:.018,start+.025);
- gain.gain.exponentialRampToValueAtTime(.0001,start+.26);
- osc.connect(gain);gain.connect(musicGain);osc.start(start);osc.stop(start+.28);
+ gain.gain.linearRampToValueAtTime(beat===0?.032:.016,start+.03);
+ gain.gain.exponentialRampToValueAtTime(.0001,start+.36);
+ osc.connect(gain);gain.connect(musicBuses[5]);osc.start(start);osc.stop(start+.38);
 }
-function scheduleMusic(){
- if(!musicOn||!musicRunning||!audio||!musicGain||audio.state==='suspended')return;
- if(musicNext<audio.currentTime-.45)musicNext=audio.currentTime+.06;
- let guard=0;
- while(musicNext<audio.currentTime+1.1&&guard++<6){
-  const stage=Math.min(CHAPTERS-1,Math.floor((p?p.x:0)/CHAPTER));
-  const combat=!!nearestActiveBoss(),sc=combat?bossScore:scoreModes[stage];
-  const beat=musicBeat,bar=Math.floor(beat/8),step=combat?.48:.84;
-  // Quiet continuous harmonies: no note-by-note ringtone rhythm during exploration.
-  if(beat%8===0){
-   const progression=[0,3,5,2],base=progression[bar%progression.length];
-   for(const offset of [0,2,4]){
-    musicVoice(musicPitch(sc,base+offset,-1),musicNext,step*8+.5,combat?.014:.020,'triangle',1.05,combat?1150:900);
-   }
-   musicVoice(musicPitch(sc,base,-2),musicNext,step*8+.4,combat?.028:.020,'sine',.95,460);
-  }
-  if(combat){
-   if(beat%2===0)musicPulse(musicNext,beat%8);
-   if(beat%4===2){
-    const order=[0,4,3,5,2,3,1,4],n=order[bar%order.length];
-    musicVoice(musicPitch(sc,n,0),musicNext+.09,step*1.6,.023,'triangle',.06,1550);
-   }
-  }else{
-   // A measured melody with space between phrases. Notes bloom and fade instead of beeping every beat.
-   const phrase=[0,null,2,null,4,3,null,null,2,null,1,null,3,null,null,null];
-   const n=phrase[(beat+bar%4*2)%phrase.length];
-   if(n!==null){
-    musicVoice(musicPitch(sc,n,0),musicNext+.13,step*2.7,.026,'sine',.12,1750);
-    if(beat%8===0)musicVoice(musicPitch(sc,n,1),musicNext+.22,step*1.45,.006,'sine',.13,2050);
-   }
-  }
-  musicBeat++;musicNext+=step;
+function musicBiomeMix(x){
+ const pos=Math.max(0,Math.min(CHAPTERS-.00001,x/CHAPTER));
+ const i=Math.min(CHAPTERS-1,Math.floor(pos)),frac=pos-i,edge=.105;
+ const weights=[0,0,0,0,0];
+ if(frac<edge&&i>0){const a=.5+frac/(2*edge);weights[i-1]=1-a;weights[i]=a}
+ else if(frac>1-edge&&i<CHAPTERS-1){const a=(frac-(1-edge))/(2*edge);weights[i]=1-a;weights[i+1]=a}
+ else weights[i]=1;
+ return weights;
+}
+function musicMix(){
+ if(!musicRunning||!audio||!musicBuses||audio.currentTime<musicMixAt)return;
+ musicMixAt=audio.currentTime+.12;
+ const active=!!nearestActiveBoss(),weights=musicBiomeMix(p?p.x:0),now=audio.currentTime;
+ // ~2 seconds of overlap when a boss appears or vanishes; forest transitions
+ // begin BEFORE the geographical chapter edge, rather than snapping at it.
+ for(let i=0;i<5;i++)musicBuses[i].gain.setTargetAtTime(weights[i]*(active?.00001:1),now,.75);
+ musicBuses[5].gain.setTargetAtTime(active?1:.00001,now,1.05);
+ if(musicEnv){
+  const quiet=mode==='playing'?1:.35;
+  musicEnv[0].gain.setTargetAtTime((.016+weights[1]*.012+weights[4]*.008)*quiet,now,1);
+  musicEnv[1].gain.setTargetAtTime((.003+weights[3]*.027)*quiet,now,1);
  }
  const stage=Math.min(CHAPTERS-1,Math.floor((p?p.x:0)/CHAPTER));
- el('musicMeta').textContent=nearestActiveBoss()?'♫ 수호자의 전투 · 전용 테마':'♫ '+scoreModes[stage].name+' · 숲의 앰비언트';
+ el('musicMeta').textContent=active?'♫ 수호자의 전투 · 적응형 테마':'♫ '+scoreModes[stage].name+' · 숲의 숨결';
+}
+function musicScene(sc,bus,beat,start,step,combat){
+ const bar=Math.floor(beat/8);
+ if(beat%8===0){
+  const chords=sc.chords||[0,3,5,2],base=chords[bar%chords.length];
+  for(const offset of [0,2,4])musicVoice(musicPitch(sc,base+offset,-1),start,step*8+.4,combat?.011:.013,'strings',.85,combat?1050:850,bus);
+  musicVoice(musicPitch(sc,base,-2),start,step*8+.4,combat?.023:.016,'sine',.9,400,bus);
+ }
+ if(combat){
+  if(beat%2===0)musicPulse(start,beat%8);
+  if(beat%4===2){
+   const seq=[0,4,3,5,2,3,1,4],n=seq[bar%seq.length];
+   musicVoice(musicPitch(sc,n,0),start+.05,step*1.8,.024,'wood',.05,1620,bus);
+  }
+ }else{
+  const phrase=sc.lead,n=phrase[(beat+(bar%4)*2)%phrase.length];
+  if(n!==null&&n!==undefined){
+   const tone=sc.tone,volume=tone==='bell'?.019:tone==='strings'?.017:.020;
+   musicVoice(musicPitch(sc,n,0),start+.07,step*(tone==='bell'?2.1:2.8),volume,tone,.13,tone==='wood'?1120:1850,bus);
+   if(beat%8===0)musicVoice(musicPitch(sc,n,1),start+.20,step*1.65,.0038,'bell',.15,2100,bus);
+  }
+ }
+}
+function scheduleMusic(){
+ if(!musicOn||!musicRunning||!audio||!musicBuses||audio.state==='suspended')return;
+ musicMix();
+ if(musicNext<audio.currentTime-.5)musicNext=audio.currentTime+.07;
+ let guard=0;
+ while(musicNext<audio.currentTime+.75&&guard++<4){
+  const active=!!nearestActiveBoss(),beat=musicBeat,step=active?.51:.80;
+  const weights=musicBiomeMix(p?p.x:0);
+  if(active)musicScene(bossScore,musicBuses[5],beat,musicNext,step,true);
+  else for(let i=0;i<5;i++)if(weights[i]>.002)musicScene(scoreModes[i],musicBuses[i],beat,musicNext,step,false);
+  musicBeat++;musicNext+=step;
+ }
 }
 el('music').addEventListener('click',()=>{
  musicOn=!musicOn;el('music').textContent=musicOn?'♫ 음악 ON':'♫ 음악 OFF';
@@ -178,7 +237,7 @@ el('music').addEventListener('click',()=>{
 el('volume').addEventListener('click',()=>{
  const options=[.25,.45,.7];let index=options.findIndex(x=>Math.abs(x-musicVolume)<.01);
  musicVolume=options[(index+1)%3];el('volume').textContent='VOL '+(options.indexOf(musicVolume)+1);
- if(musicOn&&musicGain&&audio)musicGain.gain.setTargetAtTime(musicVolume*.72,audio.currentTime,.25);
+ if(musicOn&&musicGain&&audio)musicGain.gain.setTargetAtTime(musicVolume*.62,audio.currentTime,.35);
 });
 function note(text,dur=2.3){message.textContent=text;message.style.opacity='1';toastLeft=dur}
 function clock(sec){const a=Math.floor(sec);return String(Math.floor(a/60)).padStart(2,'0')+':'+String(a%60).padStart(2,'0')}
