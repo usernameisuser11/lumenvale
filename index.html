@@ -596,8 +596,32 @@ for(let k=0;k<9;k++){let xx=(r()-.5)*340,yy=-50-r()*310;artVine(c,xx,yy,25+r()*8
 function paintSpire(c,seed,x,y,s=1){const r=rng(seed);c.save();c.translate(x,y);c.scale(s,s);for(let side of [-1,1]){c.fillStyle=side===-1?'#183943':'#204651';c.beginPath();c.moveTo(side*60,12);c.bezierCurveTo(side*122,-85,side*58,-286,side*95,-407);c.lineTo(side*122,-442);c.lineTo(side*133,-428);c.lineTo(side*131,-280);c.lineTo(side*120,-20);c.closePath();c.fill();for(let j=0;j<21;j++){let xx=side*(75+j%4*8),yy=-20-j*17;c.strokeStyle=j%4?'#799e9b2a':'#8fb6a54a';c.lineWidth=j%5===0?2.4:1.1;c.beginPath();c.moveTo(xx,yy);c.lineTo(xx+side*(8+r()*8),yy-13);c.stroke()}}
 c.strokeStyle='#2a5055';c.lineWidth=18;c.beginPath();c.moveTo(-109,-379);c.bezierCurveTo(-38,-500,40,-500,116,-381);c.stroke();c.strokeStyle='#a2d3b04c';c.lineWidth=2;c.stroke();for(let i=0;i<20;i++){let a=i/20*Math.PI;artLeaf(c,Math.cos(a)*100,-383-Math.sin(a)*90,5+r()*5,2+r()*3,a,'#3c897487')}
 for(let i=0;i<8;i++){let xx=(r()-.5)*210,yy=-300+r()*300;artVine(c,xx,yy,35+r()*75,r)}c.restore()}
+// Cached hand-painted woodland detail, generated once for each landmark.
+function paintForestFloorDetail(c,seed){
+ const r=rng(seed+7931);
+ c.save();c.lineCap='round';
+ for(let i=0;i<70;i++){
+  const x=25+r()*600,y=528+r()*36,h=7+r()*27;
+  c.strokeStyle=i%4===0?'#9ed9b25e':'#407f736b';c.lineWidth=.7+r()*1.2;
+  c.beginPath();c.moveTo(x,y);c.quadraticCurveTo(x+(r()-.5)*13,y-h*.63,x+(r()-.5)*16,y-h);c.stroke();
+  if(i%5===0){
+   c.save();c.globalAlpha=.3+r()*.35;
+   artLeaf(c,x-5,y-h*.56,4+r()*6,2+r()*3,-.6,'#81c7a5');
+   artLeaf(c,x+5,y-h*.73,4+r()*6,2+r()*3,.7,'#9dd4b4');c.restore();
+  }
+ }
+ for(let j=0;j<16;j++){
+  const x=40+r()*570,y=520+r()*38,size=1.5+r()*3;
+  const halo=c.createRadialGradient(x,y,0,x,y,size*6);
+  halo.addColorStop(0,'#d7ffe078');halo.addColorStop(.32,'#a6f4c42e');halo.addColorStop(1,'#a6f4c400');
+  c.fillStyle=halo;c.fillRect(x-size*6,y-size*6,size*12,size*12);
+  c.fillStyle=j%3?'#d3f9c4':'#f2dfb2';
+  c.beginPath();c.ellipse(x,y,size,size*.7,-.3,0,TAU);c.fill();
+ }
+ c.restore();
+}
 function setupForestArt(){const choices=['tree','temple','tree','spire','tree','temple','tree','spire','temple','tree','temple','tree'];for(let i=0;i<choices.length;i++){const can=document.createElement('canvas');can.width=650;can.height=570;const c=can.getContext('2d');const type=choices[i],seed=6301+i*233;
-if(type==='tree'){paintTree(c,seed,325,555,.96+(i%3)*.12)}else if(type==='temple'){paintTemple(c,seed,325,550,1)}else{paintSpire(c,seed,325,553,1)}forestArt.push({image:can,x:[110,525,1000,1470,1930,2420,2850,3330,3760,4210,4700,5100][i],y:90+(i%3)*13,type})}}
+if(type==='tree'){paintTree(c,seed,325,555,.96+(i%3)*.12)}else if(type==='temple'){paintTemple(c,seed,325,550,1)}else{paintSpire(c,seed,325,553,1)}paintForestFloorDetail(c,seed);forestArt.push({image:can,x:[110,525,1000,1470,1930,2420,2850,3330,3760,4210,4700,5100][i],y:90+(i%3)*13,type})}}
 setupForestArt();
 function drawForestArt(){for(let c=0;c<CHAPTERS;c++)for(const ob of forestArt){const px=ob.x+c*CHAPTER*.69-camX*.69-325;if(px>W+160||px+650< -160)continue;ctx.globalAlpha=ob.type==='tree'?.83:.78;ctx.drawImage(ob.image,px,ob.y-camY*.14-46)}ctx.globalAlpha=1}
 function drawWorldArt(){for(let c=0;c<CHAPTERS;c++)for(const ob of forestArt){let px=ob.x+c*CHAPTER;if(px+350<camX||px-350>camX+W)continue;ctx.globalAlpha=ob.type==='tree'?.42:.47;ctx.drawImage(ob.image,px-325,76)}ctx.globalAlpha=1}
@@ -609,6 +633,21 @@ function drawScenicLayer(index){
  ctx.globalAlpha=[.70,.80,.91][index];
  for(let x=-shift;x<W;x+=layer.width)ctx.drawImage(layer.canvas,x,-16-vShift,layer.width,H+110);
  ctx.globalAlpha=1;
+}
+// Palette-aware drifting haze sits between the far and near parallax layers.
+function drawValleyHaze(){
+ const pal=paletteAtProgress(camX/CHAPTER);
+ ctx.save();ctx.globalCompositeOperation='screen';
+ for(let i=0;i<4;i++){
+  const x=((i*347-camX*.055+Math.sin(t*.16+i*1.7)*34)%1450+1450)%1450-245;
+  const y=325+i*42+Math.sin(t*.12+i)*12;
+  const mist=ctx.createRadialGradient(x,y,9,x,y,230);
+  mist.addColorStop(0,pal[2].replace('rgb(','rgba(').replace(')',',.075)'));
+  mist.addColorStop(.55,pal[1].replace('rgb(','rgba(').replace(')',',.034)'));
+  mist.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=mist;ctx.beginPath();ctx.ellipse(x,y,245,64+i*9,-.05,0,TAU);ctx.fill();
+ }
+ ctx.restore();
 }
 function fireflies(){
  for(let i=0;i<105;i++){
@@ -639,7 +678,7 @@ function back(){
  drawScenicLayer(0);
  const farFog=ctx.createLinearGradient(0,290,0,540);farFog.addColorStop(0,'rgba(180,232,218,0)');farFog.addColorStop(1,palette[2].replace('rgb(','rgba(').replace(')',',.095)'));ctx.fillStyle=farFog;ctx.fillRect(0,290,W,250);
  drawScenicLayer(1);
- drawForestArt();
+ drawForestArt();drawValleyHaze();
  let mist=ctx.createLinearGradient(0,330,0,540);mist.addColorStop(0,'rgba(112,243,219,0)');mist.addColorStop(.7,palette[1].replace('rgb(','rgba(').replace(')',',.04)'));mist.addColorStop(1,palette[2].replace('rgb(','rgba(').replace(')',',.09)'));ctx.fillStyle=mist;ctx.fillRect(0,330,W,210);
  drawScenicLayer(2);
  ctx.save();ctx.globalAlpha=.12;for(let j=0;j<4;j++){
@@ -1054,6 +1093,9 @@ const skillShop=[
 {id:'weapon',icon:'⚔',name:'무기 숙련',desc:'검·활·지팡이 피해 +1',cost:n=>10+n*9,max:5},
 {id:'tempo',icon:'✦',name:'전투 감각',desc:'세 무기 재사용 대기시간 -8%',cost:n=>9+n*8,max:5},
 {id:'pulse',icon:'❋',name:'파동 강화',desc:'파동 범위 +16 · 쿨타임 -0.25초',cost:n=>8+n*7,max:5}];
+// Starting a fresh journey must clear the previous save's progression.
+const resetWorld=reset;
+reset=function(){essence=0;skillLevels={heart:0,weapon:0,tempo:0,pulse:0};resetWorld()};
 const _hudOriginal=hud;
 hud=function(){_hudOriginal();const cheapest=Math.min(...skillShop.filter(u=>skillLevels[u.id]<u.max).map(u=>u.cost(skillLevels[u.id])),999);el('essence').textContent='정수 '+essence+' / '+(cheapest===999?'MAX':cheapest);el('mobileStats').textContent='LV '+(upgradeCount+1)+' · '+clock(playSeconds)+' · 정수 '+essence+' / '+(cheapest===999?'MAX':cheapest)+' · 처치 '+kills;const cp=nearestCheckpoint();checkpointReady=!!cp;const b=el('upgradeAccess');b.classList.toggle('ready',!!cp&&essence>=cheapest);b.style.opacity=cp?'1':'.45'};
 function nearestCheckpoint(){if(!p)return null;return checkpoints.find(cp=>Math.abs(cp.x-(p.x+12))<105&&Math.abs(cp.y-(p.y+p.h))<164)||null}
