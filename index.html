@@ -37,12 +37,59 @@ canvas{display:block;width:100%;height:100%;touch-action:none}
 @media(pointer:coarse){.weaponbar{bottom:26%;padding:5px;gap:4px}.weapon{padding:4px 5px;gap:4px;min-width:75px}.weapon-icon{width:19px;height:19px}.weapon-name{font-size:10px}.weapon-key{display:none}.music-meta{display:none}.top{right:0}.stats{flex-wrap:wrap;justify-content:flex-end;max-width:84%}}
 @media(max-width:600px){.weaponbar{bottom:26%;gap:3px}.weapon{min-width:64px;padding:3px 5px}.weapon-name{font-size:9px}.weapon-icon{width:17px;height:17px}.brand{letter-spacing:.08em}.stats{gap:2px}.pill{padding:3px 5px;font-size:9px}#volume{display:none}.loadouts{gap:3px}.loadout{padding:6px 8px;font-size:10px}.combat-help{font-size:10px;margin-top:5px}}
 #upgradeAccess{opacity:.55}#upgradeAccess.ready{opacity:1;border-color:#c4ffe3;color:#fff7c8;background:#31594dcc}.up-cards{grid-template-columns:repeat(4,minmax(0,1fr))}.up-card[disabled]{opacity:.38;cursor:not-allowed;transform:none}.up-card small{font-size:11px;color:#ffe8ae}.up-close{margin-top:10px}@media(max-width:650px){.up-cards{grid-template-columns:repeat(2,minmax(0,1fr))}#upgradeAccess{font-size:9px;padding:4px 6px}}
+
+/* LUMENVALE mobile HUD v1.0 — separate mobile layout, PC untouched */
+.mobile-settings,.mobile-menu-toggle{display:none}
+@media (pointer:coarse){
+ #app.photo .mobile-settings,#app.photo .mobile-menu-toggle{display:none!important}
+ .top{z-index:6;align-items:flex-start;padding:max(5px,env(safe-area-inset-top)) max(8px,env(safe-area-inset-right)) 0 max(8px,env(safe-area-inset-left));gap:6px}
+ .brand{display:none}.stats{max-width:none;flex:1;justify-content:flex-start;flex-wrap:nowrap;gap:5px}
+ .stats .pill{font-size:clamp(9px,1.4vw,12px);padding:5px 8px;line-height:1.1;white-space:nowrap}
+ .stats #level,.stats #essence,.stats #time,.stats #ability,.stats #kills,.stats #capture,.stats #music,.stats #sound,.stats #volume{display:none!important}
+ .stats #upgradeAccess{display:none!important}
+ .stats #upgradeAccess.ready{display:block!important;position:absolute;top:39px;right:max(8px,env(safe-area-inset-right));max-width:118px;font-size:10px;padding:5px 7px;pointer-events:auto}
+ .mobile-menu-toggle{display:grid;place-items:center;pointer-events:auto;flex:none;width:38px;height:34px;background:#0a2d38dc;border:1px solid #b2ffe187;border-radius:11px;color:#e8fff3;font-size:20px;cursor:pointer}
+ .mobile-settings{display:none;position:absolute;z-index:7;top:42px;right:max(8px,env(safe-area-inset-right));width:min(264px,74vw);max-height:calc(100% - 49px);overflow-y:auto;overscroll-behavior:contain;pointer-events:auto;padding:11px;border:1px solid #a4f6dc7e;border-radius:14px;background:#071b28f0;box-shadow:0 12px 32px #000a;backdrop-filter:blur(12px);color:#e7fff5;gap:7px}
+ .mobile-settings.open{display:grid}.mobile-settings-head{display:flex;align-items:center;justify-content:space-between;font-size:14px;font-weight:800}
+ .mobile-settings button{min-height:32px;padding:6px 8px;color:#e7fff5;border:1px solid #9feace52;border-radius:9px;background:#163f4ac9;text-align:left;font-size:12px;cursor:pointer}
+ .mobile-settings .mobile-close{font-size:18px;text-align:center;min-width:35px}
+ .mobile-settings .mobile-detail{color:#b3d8cf;font-size:11px;line-height:1.45}
+ .mobile-settings .mobile-row{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+ .touch{bottom:max(4px,env(safe-area-inset-bottom));padding:0 max(7px,env(safe-area-inset-right)) 0 max(7px,env(safe-area-inset-left));gap:5px;align-items:flex-end}
+ .touch .cluster{gap:clamp(3px,.7vw,8px);align-items:flex-end}
+ .ctrl,.ctrl.big{width:clamp(34px,5vw,49px);height:clamp(34px,5vw,49px);border-radius:13px;font-size:clamp(12px,1.7vw,19px);background:#0b303c9e;border-color:#b1eed17d;box-shadow:0 4px 15px #0019}
+ .ctrl.big.attack{width:clamp(45px,6vw,60px);height:clamp(45px,6vw,60px);border-radius:50%;font-size:clamp(11px,1.3vw,15px);background:#54442da6}
+ .ctrl.big:not(.attack){width:clamp(42px,5.7vw,56px);height:clamp(42px,5.7vw,56px);border-radius:50%;font-size:clamp(11px,1.3vw,15px)}
+ .ctrl[data-key="dash"],.ctrl[data-key="pulse"]{width:clamp(32px,4.5vw,45px);height:clamp(32px,4.5vw,45px);border-radius:50%;font-size:clamp(10px,1.1vw,13px)}
+ .weaponbar{z-index:5;left:auto;right:max(8px,env(safe-area-inset-right));bottom:clamp(60px,13vh,85px);transform:none;flex-direction:column;align-items:stretch;gap:3px;max-width:132px;min-width:98px;padding:4px;border-radius:11px;background:#082430cf}
+ .weaponbar:not(.expanded) .weapon:not(.active){display:none}
+ .weaponbar .weapon{min-width:0;width:100%;padding:5px 6px;gap:5px;border-radius:8px}
+ .weaponbar .weapon-name{font-size:11px}.weaponbar .weapon-icon{font-size:17px;width:18px;height:18px}.weaponbar .weapon-key{display:none}
+ .weaponbar:not(.expanded) .weapon.active::after{content:"⌄";margin-left:auto;color:#caffeb;font-size:13px}
+ .music-meta{display:none}
+}
+@media (pointer:coarse) and (orientation:portrait){
+ .ctrl,.ctrl.big{width:29px;height:29px;min-width:29px;min-height:29px;border-radius:8px;font-size:11px}
+ .ctrl.big.attack{width:36px;height:36px;min-width:36px;min-height:36px}
+ .ctrl.big:not(.attack){width:34px;height:34px;min-width:34px;min-height:34px}
+ .ctrl[data-key="dash"],.ctrl[data-key="pulse"]{width:27px;height:27px;min-width:27px;min-height:27px;font-size:9px}
+ .touch .cluster{gap:2px}.touch{padding:0 3px;bottom:max(2px,env(safe-area-inset-bottom))}
+ .weaponbar{bottom:43px;right:3px;max-width:108px}
+ .stats .pill{padding:3px 5px}.mobile-menu-toggle{width:30px;height:28px;font-size:16px}
+}
 </style></head>
 <body><main id="app" aria-label="Lumenvale 숲 탐험 게임"><canvas id="game" width="960" height="540"></canvas>
-<header class="top"><div class="brand">LUMENVALE<small>THE GUARDIANS · REWORKED</small></div><div class="stats"><span class="pill" id="hearts">♥ ♥ ♥</span><span class="pill" id="light">✦ <b>0</b> / 65</span><span class="pill" id="level">LV 1</span><span class="pill" id="essence">정수 0 / 8</span><button class="pill" id="upgradeAccess" title="저장지점 옆에서 E를 눌러 강화">✦ 강화 (E)</button><span class="pill" id="time">00:00</span><span class="pill" id="ability">대시 ◈</span><span class="pill" id="kills">⚔ 0</span><button class="pill mute" id="capture" title="촬영 모드: P키 / 다시 P키 또는 화면 터치로 복귀" aria-label="촬영 모드">📷 촬영</button><button class="pill mute" id="music" title="오리지널 숲 음악 켜기/끄기">♫ 음악 OFF</button><button class="pill mute" id="sound" title="효과음 켜기/끄기">효과 OFF</button><button class="pill mute" id="volume" title="음악 볼륨 조절">VOL 2</button></div></header>
+<header class="top"><div class="brand">LUMENVALE<small>THE GUARDIANS · REWORKED</small></div><div class="stats"><span class="pill" id="hearts">♥ ♥ ♥</span><span class="pill" id="light">✦ <b>0</b> / 65</span><span class="pill" id="level">LV 1</span><span class="pill" id="essence">정수 0 / 8</span><button class="pill" id="upgradeAccess" title="저장지점 옆에서 E를 눌러 강화">✦ 강화 (E)</button><span class="pill" id="time">00:00</span><span class="pill" id="ability">대시 ◈</span><span class="pill" id="kills">⚔ 0</span><button class="pill mute" id="capture" title="촬영 모드: P키 / 다시 P키 또는 화면 터치로 복귀" aria-label="촬영 모드">📷 촬영</button><button class="pill mute" id="music" title="오리지널 숲 음악 켜기/끄기">♫ 음악 OFF</button><button class="pill mute" id="sound" title="효과음 켜기/끄기">효과 OFF</button><button class="pill mute" id="volume" title="음악 볼륨 조절">VOL 2</button></div><button id="mobileMenuToggle" class="mobile-menu-toggle" type="button" aria-label="모바일 설정 열기" aria-expanded="false" aria-controls="mobileSettings">☰</button></header>
+<section id="mobileSettings" class="mobile-settings" aria-label="모바일 설정" role="dialog" aria-modal="false">
+<div class="mobile-settings-head"><span>숲의 기록 · 설정</span><button id="mobileClose" type="button" class="mobile-close" aria-label="메뉴 닫기">×</button></div>
+<div id="mobileStats" class="mobile-detail">LV 1 · 00:00 · 정수 0</div>
+<div class="mobile-row"><button id="mobileMusic" type="button">♫ 음악 OFF</button><button id="mobileSound" type="button">효과 OFF</button></div>
+<button id="mobileVolume" type="button">음악 볼륨 · VOL 2</button>
+<div class="mobile-row"><button id="mobilePhoto" type="button">📷 촬영 모드</button><button id="mobilePause" type="button">Ⅱ 일시정지</button></div>
+<div class="mobile-detail">촬영 모드는 게임 화면 터치로 복귀해.</div></section>
 <div class="music-meta" id="musicMeta">♪ 숲의 숨결 · 음악 버튼을 눌러 켜기</div><div id="message" aria-live="polite"></div>
 <nav id="weaponBar" class="weaponbar" aria-label="무기 선택"><button class="weapon active" data-weapon="0"><span class="weapon-icon" aria-hidden="true">⚔</span><span><span class="weapon-name">빛의 검</span><br><span class="weapon-key">1 · 근접</span></span></button><button class="weapon" data-weapon="1"><span class="weapon-icon" aria-hidden="true">➶</span><span><span class="weapon-name">달빛 활</span><br><span class="weapon-key">2 · 원거리</span></span></button><button class="weapon" data-weapon="2"><span class="weapon-icon" aria-hidden="true">✧</span><span><span class="weapon-name">정령 지팡이</span><br><span class="weapon-key">3 · 범위</span></span></button></nav>
-<div class="touch" id="touch"><div class="cluster"><button class="ctrl" data-key="left" aria-label="왼쪽 이동">◀</button><button class="ctrl" data-key="right" aria-label="오른쪽 이동">▶</button></div><div class="cluster"><button class="ctrl dim" data-key="pulse" aria-label="빛의 파동">파동</button><button class="ctrl big attack" data-key="attack" aria-label="선택한 무기로 공격">공격</button><button class="ctrl" data-key="dash" aria-label="대시">⇢</button><button class="ctrl big" data-key="jump" aria-label="점프">점프</button></div></div>
+<div class="touch" id="touch"><div class="cluster"><button class="ctrl" data-key="left" aria-label="왼쪽 이동">◀</button><button class="ctrl" data-key="right" aria-label="오른쪽 이동">▶</button><button class="ctrl" data-key="dash" aria-label="대시">⇢</button></div><div class="cluster"><button class="ctrl dim" data-key="pulse" aria-label="빛의 파동">파동</button><button class="ctrl big attack" data-key="attack" aria-label="선택한 무기로 공격">공격</button><button class="ctrl big" data-key="jump" aria-label="점프">점프</button></div></div>
 <footer class="bottom"><span>이동 A D / ← →　·　점프 SPACE / W　·　대시 SHIFT / X　·　공격 J / Z · 파동 Q / F · 무기 1 / 2 / 3</span><span>E 저장지점 강화 · P 촬영 · ESC 일시정지</span></footer>
 <section id="upgrade" aria-label="능력 강화 선택" role="dialog" aria-modal="true"><div class="up-panel"><div class="up-kicker">THE FOREST REMEMBERS YOU</div><h2 class="up-title" id="upgradeTitle">숲의 축복</h2><p class="up-intro" id="upgradeIntro">원하는 능력을 선택해 줘</p><div class="up-cards" id="upgradeCards"></div><button id="upgradeClose" type="button" class="secondary" style="margin-top:14px">돌아가기 (ESC)</button><p class="up-foot">강화는 정수를 소비해 · ESC 또는 닫기로 복귀 · 저장지점에서만 가능</p></div></section>
 <section id="overlay"><div class="panel"><div class="eyebrow">AN ENCHANTED FOREST, REAWAKENED</div><h1 class="title" id="overlayTitle">LUMENVALE</h1><p class="sub" id="overlaySub">살아 있는 달빛의 숲</p><p class="desc" id="overlayDesc">다섯 숲에서 세 무기를 바꿔 싸우고 1·3·5장 수호자의 다양한 공격을 피하며 마지막 문을 열어줘.<br>몬스터의 <b>공격 예고</b>를 피하고, 가시와 떠다니는 위험 생물은 접촉하지 마.<br>정령빛과 몬스터 처치로 정수를 모아 저장지점에서 실용적인 능력을 강화할 수 있어.</p><div class="loadouts" aria-label="출발 무기 선택"><button class="loadout selected" data-start-weapon="0">⚔ 빛의 검</button><button class="loadout" data-start-weapon="1">➶ 달빛 활</button><button class="loadout" data-start-weapon="2">✧ 정령 지팡이</button></div><div class="actions"><button id="start" class="primary">✦ 여행 시작</button><button id="how" class="secondary">조작법</button><button id="continue" class="secondary" style="display:none">↻ 저장된 여행 이어하기</button></div><div class="keys"><span><kbd>A</kbd><kbd>D</kbd> 이동</span><span><kbd>SPACE</kbd> 점프 · 공중 한 번 더</span><span><kbd>SHIFT</kbd> 대시</span><span><kbd>J</kbd> 공격 · <kbd>Q</kbd> 파동</span><span><kbd>1·2·3</kbd> 무기 교체</span><span><kbd>P</kbd> 촬영 모드</span><span><kbd>ESC</kbd> 일시정지</span><div class="combat-help">♫ 음악을 켜면 숲의 색과 보스전 분위기에 따라 음악도 달라져 · 독립 제작한 오리지널 신시사이저 사운드트랙</div></div></section>
@@ -241,7 +288,7 @@ el('volume').addEventListener('click',()=>{
 });
 function note(text,dur=2.3){message.textContent=text;message.style.opacity='1';toastLeft=dur}
 function clock(sec){const a=Math.floor(sec);return String(Math.floor(a/60)).padStart(2,'0')+':'+String(a%60).padStart(2,'0')}
-function hud(){el('hearts').textContent='♥ '+p.hp+'/'+p.maxHp;el('light').innerHTML='✦ <b>'+collected+'</b> / '+GOAL;el('level').textContent='LV '+(upgradeCount+1);el('time').textContent=clock(playSeconds);el('ability').textContent=p.dashReady?'대시 ◈':'대시 ◇';el('kills').textContent='⚔ '+kills}
+function hud(){el('hearts').textContent='♥ '+p.hp+'/'+p.maxHp;el('light').innerHTML='✦ <b>'+collected+'</b> / '+GOAL;el('level').textContent='LV '+(upgradeCount+1);el('time').textContent=clock(playSeconds);el('ability').textContent=p.dashReady?'대시 ◈':'대시 ◇';el('kills').textContent='⚔ '+kills;el('mobileStats').textContent='LV '+(upgradeCount+1)+' · '+clock(playSeconds)+' · 정수 '+el('essence').textContent+' · 처치 '+kills}
 const baseGrounds=[[0,720],[850,1495],[1660,2320],[2470,3120],[3290,3890],[4055,5230]];
 const grounds=Array.from({length:CHAPTERS},(_,c)=>baseGrounds.map(([a,b])=>[a+c*CHAPTER,b+c*CHAPTER])).flat();
 function makeWorld(){
@@ -281,7 +328,7 @@ function showOverlay(title,sub,desc,button){el('overlayTitle').textContent=title
 function play(){if(mode==='menu'||mode==='won'){reset()}el('app').classList.remove('photo');mode='playing';overlay.classList.add('hidden');last=performance.now();note('거대한 고목과 잊힌 유적 사이로, 빛의 길을 따라가자!',3);sound(620,.21);if(musicOn)startMusic();}
 function pause(){if(mode==='playing'){mode='paused';showOverlay('잠시 쉬어가자','숲은 기다리고 있어','지금까지 모은 빛과 체크포인트는 그대로야.','▶ 계속하기')}else if(mode==='paused'){mode='playing';overlay.classList.add('hidden');last=performance.now()}}
 function togglePhoto(){if(mode==='playing'){mode='photo';el('app').classList.add('photo');Object.keys(input).forEach(k=>input[k]=false);Object.keys(just).forEach(k=>just[k]=false);acc=0}else if(mode==='photo'){mode='playing';el('app').classList.remove('photo');last=performance.now();acc=0}}
-el('capture').addEventListener('click',togglePhoto);cv.addEventListener('pointerdown',()=>{if(mode==='photo')togglePhoto()});
+el('capture').addEventListener('click',togglePhoto);cv.addEventListener('pointerdown',()=>{closeMobileMenu();el('weaponBar').classList.remove('expanded');if(mode==='photo')togglePhoto()});
 startButton.addEventListener('click',()=>{if(mode==='paused'){pause()}else play()});
 function openUpgrade(shrine){if(mode!=='playing'||shrine.done)return;selectedShrine=shrine;mode='upgrade';Object.keys(input).forEach(k=>input[k]=false);Object.keys(just).forEach(k=>just[k]=false);upgradeOptions=[upgrades[(shrine.index*2)%6],upgrades[(shrine.index*2+1)%6],upgrades[(shrine.index*2+3)%6]];el('upgradeTitle').textContent='✦ 숲의 축복 '+(upgradeCount+1);el('upgradeIntro').textContent=chapters[Math.min(CHAPTERS-1,Math.floor(shrine.x/CHAPTER))]+' · 다음 여정을 위한 능력을 골라줘';el('upgradeCards').innerHTML='';upgradeOptions.forEach((u,i)=>{const btn=document.createElement('button');btn.type='button';btn.className='up-card';const icon=document.createElement('span');icon.className='up-icon';icon.textContent=u.icon;const title=document.createElement('strong');title.textContent=u.name;const desc=document.createElement('em');desc.textContent=u.desc;const key=document.createElement('span');key.className='up-key';key.textContent=String(i+1);btn.append(icon,title,desc,key);btn.addEventListener('click',()=>chooseUpgrade(i));el('upgradeCards').appendChild(btn)});el('upgrade').classList.add('open');sound(770,.25,'triangle');}
 function chooseUpgrade(i){if(mode!=='upgrade'||!selectedShrine||!upgradeOptions[i])return;const u=upgradeOptions[i];if(u.id==='heart'){p.maxHp++;p.hp=p.maxHp}else if(u.id==='speed'){p.speed+=21}else if(u.id==='pulse'){p.pulseRadius+=23;p.pulseDelay=Math.max(1.65,p.pulseDelay-.34)}else if(u.id==='dash'){p.dashSpeed+=65;p.dashDuration+=.009}else if(u.id==='jump'){p.jumpBoost+=32}else if(u.id==='weapon'){p.weaponBonus+=1}selectedShrine.done=true;upgradeCount++;selectedShrine=null;mode='playing';el('upgrade').classList.remove('open');p.inv=Math.max(p.inv,1.2);last=performance.now();acc=0;hud();particlesAt(p.x+12,p.y+18,45,'#caffdf',205);note(u.name+' 강화 완료! · LV '+(upgradeCount+1),2.7);sound(1080,.42,'sine');}
@@ -289,17 +336,35 @@ function chooseUpgrade(i){if(mode!=='upgrade'||!selectedShrine||!upgradeOptions[
 howButton.addEventListener('click',()=>{el('overlayDesc').innerHTML='이동: A / D · 점프: SPACE / W · 대시: SHIFT / X<br>공격: J / Z / 마우스 클릭 · 무기 변경: 1 / 2 / 3<br>빛의 파동: Q / F · 모바일은 화면 버튼을 사용해.<br>공격형 적은 예고 뒤 공격하며, 떠다니는 생물·가시는 접촉하면 피해를 입어.<br>정령빛·몬스터로 정수를 모아 저장지점 근처에서 E 또는 강화 버튼을 눌러. 저장 후에 재접속하면 이어할 수 있어.';});
 el('sound').addEventListener('click',()=>{soundOn=!soundOn;el('sound').textContent=soundOn?'효과 ON':'효과 OFF';if(soundOn)sound(700,.15)});
 for(const button of document.querySelectorAll('[data-start-weapon]'))button.addEventListener('click',()=>{startWeapon=Number(button.dataset.startWeapon);setWeapon(startWeapon,false);document.querySelectorAll('[data-start-weapon]').forEach(b=>b.classList.toggle('selected',Number(b.dataset.startWeapon)===startWeapon))});
-for(const button of document.querySelectorAll('[data-weapon]'))button.addEventListener('click',()=>{if(mode==='playing')setWeapon(Number(button.dataset.weapon))});
+for(const button of document.querySelectorAll('[data-weapon]'))button.addEventListener('click',()=>{if(mode!=='playing')return;const bar=el('weaponBar');if(matchMedia('(pointer:coarse)').matches&&!bar.classList.contains('expanded')){bar.classList.add('expanded');return}setWeapon(Number(button.dataset.weapon));bar.classList.remove('expanded')});
 function setWeapon(n,announce=true){weaponIndex=clamp(n,0,2);document.querySelectorAll('[data-weapon]').forEach(b=>{const selected=Number(b.dataset.weapon)===weaponIndex;b.classList.toggle('active',selected);b.setAttribute('aria-pressed',String(selected))});if(announce&&mode==='playing'){note(['빛의 검 · 근접','달빛 활 · 원거리','정령 지팡이 · 범위'][weaponIndex],1.1);sound(620+weaponIndex*100,.11,'triangle',.035)}}
 cv.addEventListener('pointerdown',e=>{if(mode==='playing'&&e.pointerType==='mouse'&&e.button===0){setInput('attack',true);setTimeout(()=>setInput('attack',false),80)}});
 
 function setInput(k,v){if(!(k in input))return;if(v&&!input[k]&&k in just)just[k]=true;input[k]=v;}
 const keys={ArrowLeft:'left',KeyA:'left',ArrowRight:'right',KeyD:'right',ArrowUp:'jump',KeyW:'jump',Space:'jump',ShiftLeft:'dash',ShiftRight:'dash',KeyX:'dash',KeyK:'dash',KeyQ:'pulse',KeyF:'pulse',KeyJ:'attack',KeyZ:'attack',KeyC:'attack'};
-window.addEventListener('keydown',e=>{if(keys[e.code]||['Digit1','Digit2','Digit3'].includes(e.code)||e.code==='Escape'||e.code==='Enter'||e.code==='KeyP'||(mode==='upgrade'&&['Digit1','Digit2','Digit3','Numpad1','Numpad2','Numpad3'].includes(e.code)))e.preventDefault();if(e.code==='KeyP'){if(!e.repeat)togglePhoto();return}if(mode==='photo'){if(e.code==='Escape')togglePhoto();return}if(mode==='upgrade'){if(['Digit1','Digit2','Digit3','Numpad1','Numpad2','Numpad3'].includes(e.code))chooseUpgrade(Number(e.code.slice(-1))-1);return}if(e.code==='Escape'){pause();return}if(mode==='playing'&&['Digit1','Digit2','Digit3'].includes(e.code)){setWeapon(Number(e.code.slice(-1))-1);return}if(e.code==='Enter'&&mode!=='playing'){if(mode==='paused')pause();else play();return}if(keys[e.code])setInput(keys[e.code],true)});
+window.addEventListener('keydown',e=>{if(e.code==='Escape'&&el('mobileSettings').classList.contains('open')){e.preventDefault();closeMobileMenu();return}if(keys[e.code]||['Digit1','Digit2','Digit3'].includes(e.code)||e.code==='Escape'||e.code==='Enter'||e.code==='KeyP'||(mode==='upgrade'&&['Digit1','Digit2','Digit3','Numpad1','Numpad2','Numpad3'].includes(e.code)))e.preventDefault();if(e.code==='KeyP'){if(!e.repeat)togglePhoto();return}if(mode==='photo'){if(e.code==='Escape')togglePhoto();return}if(mode==='upgrade'){if(['Digit1','Digit2','Digit3','Numpad1','Numpad2','Numpad3'].includes(e.code))chooseUpgrade(Number(e.code.slice(-1))-1);return}if(e.code==='Escape'){pause();return}if(mode==='playing'&&['Digit1','Digit2','Digit3'].includes(e.code)){setWeapon(Number(e.code.slice(-1))-1);return}if(e.code==='Enter'&&mode!=='playing'){if(mode==='paused')pause();else play();return}if(keys[e.code])setInput(keys[e.code],true)});
 window.addEventListener('keyup',e=>{if(keys[e.code]){e.preventDefault();setInput(keys[e.code],false)}});
 // 캡처 도구(Win+Shift+S 등)로 포커스가 빠져도 계속하기 창을 띄우지 않는다.
 window.addEventListener('blur',()=>{Object.keys(input).forEach(k=>input[k]=false);Object.keys(just).forEach(k=>just[k]=false)});
 for(const btn of document.querySelectorAll('[data-key]')){const k=btn.dataset.key;btn.addEventListener('pointerdown',e=>{e.preventDefault();try{btn.setPointerCapture(e.pointerId)}catch(_){}btn.classList.add('pressed');setInput(k,true)});for(const ev of ['pointerup','pointercancel','lostpointercapture'])btn.addEventListener(ev,e=>{e.preventDefault();btn.classList.remove('pressed');setInput(k,false)})}
+
+// Mobile controls delegate to the original game's audio, photo and pause handlers.
+const mobileMenu=el('mobileSettings'),mobileToggle=el('mobileMenuToggle');
+function closeMobileMenu(){mobileMenu.classList.remove('open');mobileToggle.setAttribute('aria-expanded','false')}
+function syncMobileAudio(){el('mobileMusic').textContent=el('music').textContent;el('mobileSound').textContent=el('sound').textContent;el('mobileVolume').textContent='음악 볼륨 · '+el('volume').textContent}
+mobileToggle.addEventListener('click',()=>{
+ const open=!mobileMenu.classList.contains('open');mobileMenu.classList.toggle('open',open);
+ mobileToggle.setAttribute('aria-expanded',String(open));
+ if(open){el('weaponBar').classList.remove('expanded');syncMobileAudio();hud()}
+});
+el('mobileClose').addEventListener('click',closeMobileMenu);
+el('mobileMusic').addEventListener('click',()=>{el('music').click();syncMobileAudio()});
+el('mobileSound').addEventListener('click',()=>{el('sound').click();syncMobileAudio()});
+el('mobileVolume').addEventListener('click',()=>{el('volume').click();syncMobileAudio()});
+el('mobilePhoto').addEventListener('click',()=>{closeMobileMenu();togglePhoto()});
+el('mobilePause').addEventListener('click',()=>{closeMobileMenu();pause()});
+syncMobileAudio();
+
 function particlesAt(x,y,n,color,spread=130){for(let i=0;i<n;i++){const a=random()*Math.PI*2,s=(.25+random())*spread;particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s-50,life:.4+random()*.65,max:1,r:1+random()*3,color})}if(particles.length>280)particles.splice(0,particles.length-280)}
 function damage(amount=1,from=0){if(p.inv>0||mode!=='playing')return;p.hp-=amount;p.inv=1.5;shake=9;p.vy=-240;p.vx=from*190;particlesAt(p.x+p.w/2,p.y+18,19,'#f69cb9',195);sound(178,.25,'sawtooth');hud();if(p.hp<=0)respawn()}
 function respawn(){deaths++;const cp=checkpoints[activeCheckpoint];p.x=cp.x;p.y=cp.y-p.h;p.vx=p.vy=0;p.hp=p.maxHp;p.inv=2;p.dashReady=true;p.dashT=0;p.jumps=0;camX=clamp(p.x-280,0,WORLD-W);note('빛은 사라지지 않아. 다시 도전해!',2);particlesAt(p.x,p.y,27,'#7dffdf',150);hud()}
