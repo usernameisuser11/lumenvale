@@ -379,13 +379,30 @@ function enemyHit(e,amount,from,flavor='sword'){
  if(e.kind!=='thorn')e.x=clamp(e.x+from*12,e.lo,e.hi);
  if(e.hp<=0){e.alive=false;if(e.kind.startsWith('boss'))bossDefeated(e);kills++;particlesAt(e.x,e.y,30,e.kind==='thorn'?'#c4e9a9':'#b1c3ff',155);sound(170,.24,'triangle',.07);if(kills%6===0&&p.hp<p.maxHp){p.hp++;note('정령의 힘으로 체력 +1',2);particlesAt(p.x+12,p.y+14,26,'#c9ffd8',145)}hud()}
 }
+// Combat hitboxes follow each creature's rendered BODY, not its feet.
+// Roots, ornamental leaves and extended tendrils are not vulnerable.
+function enemyHurtbox(e){
+ const k=e.kind,hw=k==='bossRoot'?78:k==='bossWatcher'?66:k==='bossShade'?71:k==='warden'?33:k==='thorn'?24:21;
+ const top=e.y-(k==='bossRoot'?132:k==='bossWatcher'?108:k==='bossShade'?112:k==='warden'?46:k==='thorn'?33:24);
+ const bottom=e.y+(k==='bossRoot'?23:k==='bossWatcher'?49:k==='bossShade'?38:k==='warden'?37:k==='thorn'?27:25);
+ return {left:e.x-hw,right:e.x+hw,top,bottom};
+}
+function circleHitsEnemy(x,y,r,e){
+ const b=enemyHurtbox(e),xx=clamp(x,b.left,b.right),yy=clamp(y,b.top,b.bottom);
+ return (x-xx)**2+(y-yy)**2<=r*r;
+}
+function areaDamage(x,y,r,amount,from,flavor='staff'){
+ let hits=0;
+ for(const e of enemies)if(e.alive&&circleHitsEnemy(x,y,r,e)){enemyHit(e,amount,from,flavor);hits++}
+ return hits;
+}
 function playerAttack(){
  if(p.attackCd>0||mode!=='playing')return;
  const cx=p.x+12,cy=p.y+15,dir=p.face,bonus=p.weaponBonus||0,weapon=weaponIndex,def=weaponDefs[weapon];
  p.attackCd=def.cool;p.attackAnim=.25;
  if(weapon===0){
   slashFx.push({x:cx,y:cy,dir,life:.22});sound(360,.17,'triangle',.055);
-  for(const e of enemies){if(!e.alive)continue;const dx=(e.x-cx)*dir,dy=e.y-cy;if(dx>-13&&dx<89&&Math.abs(dy)<51)enemyHit(e,def.damage+bonus,dir,'sword')}
+  for(const e of enemies){if(!e.alive)continue;const b=enemyHurtbox(e);const xOk=dir>0?b.right>=cx-13&&b.left<=cx+89:b.left<=cx+13&&b.right>=cx-89;if(xOk&&b.bottom>=cy-51&&b.top<=cy+51)enemyHit(e,def.damage+bonus,dir,'sword')}
   particlesAt(cx+dir*38,cy,7,'#e1ffee',110);
  }else if(weapon===1){
   shots.push({x:cx+dir*16,y:cy-5,vx:dir*710,vy:-12,r:5,damage:def.damage+bonus,kind:'bow',life:1.2,dir});sound(560,.13,'triangle',.042);
@@ -396,9 +413,15 @@ function playerAttack(){
 function touchSolid(x,y){return platforms.some(s=>x>=s.x&&x<=s.x+s.w&&y>=s.y&&y<=s.y+s.h)}
 function updateProjectiles(dt){
  for(const sh of shots){sh.x+=sh.vx*dt;sh.y+=sh.vy*dt;sh.life-=dt;
-  const target=enemies.find(e=>e.alive&&Math.hypot(e.x-sh.x,e.y-sh.y)<(e.kind.startsWith('boss')?e.kind==='bossWatcher'?51:67:e.kind==='warden'?29:21)+sh.r);
-  if(target){if(sh.kind==='staff'){particlesAt(sh.x,sh.y,26,'#adafff',145);for(const e of enemies){if(e.alive&&Math.hypot(e.x-sh.x,e.y-sh.y)<63)enemyHit(e,sh.damage,sh.dir,'staff')}}else enemyHit(target,sh.damage,sh.dir,'bow');sh.life=0}
-  if(sh.life>0&&touchSolid(sh.x,sh.y)){if(sh.kind==='staff')particlesAt(sh.x,sh.y,13,'#b0aeff',105);sh.life=0}
+  const target=enemies.find(e=>e.alive&&circleHitsEnemy(sh.x,sh.y,sh.r,e));
+  const terrainHit=sh.life>0&&touchSolid(sh.x,sh.y);
+  if(target||terrainHit){
+   if(sh.kind==='staff'){
+    particlesAt(sh.x,sh.y,26,'#adafff',145);
+    areaDamage(sh.x,sh.y,63,sh.damage,sh.dir,'staff');
+   }else if(target)enemyHit(target,sh.damage,sh.dir,'bow');
+   sh.life=0;
+  }
   if(sh.x<0||sh.x>WORLD)sh.life=0;
  }
  shots=shots.filter(x=>x.life>0);
@@ -432,7 +455,7 @@ function updateFighters(dt){
   if(e.kind==='swift'&&e.attackTime>0&&!e.attackDone&&ad<37&&Math.abs(dy)<40){damage(1,-e.face);e.attackDone=true}
  }
 }
-function doPulse(){if(p.pulseCd>0)return;p.pulseCd=p.pulseDelay;pulseRing=.48;pulseX=p.x+p.w/2;pulseY=p.y+16;let slain=0;for(const e of enemies){if(e.alive&&Math.hypot(e.x-pulseX,e.y-pulseY)<p.pulseRadius){enemyHit(e,1+p.weaponBonus,p.face,'staff');if(!e.alive)slain++;particlesAt(e.x,e.y,13,'#abfbf6',175)}}for(const m of moving){if(Math.hypot(m.x-pulseX,m.y-pulseY)<125){m.phase+=2.8}}particlesAt(pulseX,pulseY,30,'#b2fff2',270);sound(480,.32,'sine',.085);if(slain)note('그림자 '+slain+'개 정화!',1.1)}
+function doPulse(){if(p.pulseCd>0)return;p.pulseCd=p.pulseDelay;pulseRing=.48;pulseX=p.x+p.w/2;pulseY=p.y+16;let slain=0;for(const e of enemies){if(e.alive&&circleHitsEnemy(pulseX,pulseY,p.pulseRadius,e)){enemyHit(e,1+p.weaponBonus,p.face,'staff');if(!e.alive)slain++;particlesAt(e.x,e.y,13,'#abfbf6',175)}}for(const m of moving){if(Math.hypot(m.x-pulseX,m.y-pulseY)<125){m.phase+=2.8}}particlesAt(pulseX,pulseY,30,'#b2fff2',270);sound(480,.32,'sine',.085);if(slain)note('그림자 '+slain+'개 정화!',1.1)}
 function step(dt){t+=dt;playSeconds+=dt;if(Math.floor(playSeconds*2)!==Math.floor((playSeconds-dt)*2))hud();if(toastLeft>0){toastLeft-=dt;if(toastLeft<=0)message.style.opacity='0'}shake=Math.max(0,shake-dt*24);pulseRing=Math.max(0,pulseRing-dt);p.inv=Math.max(0,p.inv-dt);p.pulseCd=Math.max(0,p.pulseCd-dt);p.attackCd=Math.max(0,p.attackCd-dt);p.attackAnim=Math.max(0,p.attackAnim-dt);p.jumpBuffer=Math.max(0,p.jumpBuffer-dt);
  if(just.jump){p.jumpBuffer=.14;just.jump=false}if(just.pulse){doPulse();just.pulse=false}if(just.attack||input.attack&&p.attackCd<=0){playerAttack();just.attack=false}
  const direction=(input.right?1:0)-(input.left?1:0);if(direction)p.face=direction;
@@ -795,7 +818,7 @@ function drawWorld(){ctx.save();ctx.translate(-camX+(shake?(random()-.5)*shake:0
  for(const m of moving){if(m.x<camX-50||m.x>camX+W+50)continue;drawWispHazard(m);if(Math.abs(p.x-m.x)<125){ctx.font='bold 11px system-ui';ctx.textAlign='center';ctx.fillStyle='#f1bbd8';ctx.shadowColor='#190f27';ctx.shadowBlur=6;ctx.fillText('! 접촉 위험',m.x,m.y-35);ctx.shadowBlur=0}}
  const px=PORTAL,py=506;glow(px,py,125,'rgba(193,250,174,ALPHA)',collected>=GOAL?.4:.2);if(artReady.portal){ctx.save();ctx.globalAlpha=collected>=GOAL?1:.77;ctx.drawImage(artAssets.portal,px-60,py-94,120,178);ctx.restore()}else{ctx.strokeStyle=collected>=GOAL?'#b1ffd2':'#719c97';ctx.lineWidth=7;ctx.beginPath();ctx.ellipse(px,py,33,71,0,0,TAU);ctx.stroke()}if(collected>=GOAL){for(let j=0;j<8;j++){let yy=py-58+((j*19+t*30)%118);disk(px+Math.sin(t*2+j)*14,yy,2,'#edffd8')}}
  drawActor();drawCombatEffects();for(const q of particles){if(q.x<camX-30||q.x>camX+W+30)continue;ctx.globalAlpha=clamp(q.life/.65,0,1);disk(q.x,q.y,q.r,q.color)}ctx.globalAlpha=1;
- if(pulseRing>0){let k=1-pulseRing/.48;ctx.strokeStyle=`rgba(180,255,220,${1-k})`;ctx.lineWidth=7*(1-k)+1;ctx.beginPath();ctx.arc(pulseX,pulseY,k*156,0,Math.PI*2);ctx.stroke()}
+ if(pulseRing>0){let k=1-pulseRing/.48;ctx.strokeStyle=`rgba(180,255,220,${1-k})`;ctx.lineWidth=7*(1-k)+1;ctx.beginPath();ctx.arc(pulseX,pulseY,k*p.pulseRadius,0,Math.PI*2);ctx.stroke()}
  ctx.restore();}
 function drawForeground(){const v=ctx.createRadialGradient(W*.5,H*.43,H*.24,W*.5,H*.48,H*.88);v.addColorStop(0,'#00101900');v.addColorStop(1,'#000811a1');ctx.fillStyle=v;ctx.fillRect(0,0,W,H);
  const edge=ctx.createLinearGradient(0,0,0,H);edge.addColorStop(0,'#71e6bc12');edge.addColorStop(.45,'#71e6bc00');edge.addColorStop(1,'#6acbbf08');ctx.fillStyle=edge;ctx.fillRect(0,0,W,H);
@@ -979,7 +1002,7 @@ drawWorld = function(){ctx.save();ctx.translate(-camX+(shake?(random()-.5)*shake
  for(const m of moving){if(m.x<camX-50||m.x>camX+W+50)continue;drawWispHazard(m);if(Math.abs(p.x-m.x)<125){ctx.font='bold 11px system-ui';ctx.textAlign='center';ctx.fillStyle='#f1bbd8';ctx.shadowColor='#190f27';ctx.shadowBlur=6;ctx.fillText('! 접촉 위험',m.x,m.y-35);ctx.shadowBlur=0}}
  const px=PORTAL,py=506;glow(px,py,125,'rgba(193,250,174,ALPHA)',collected>=GOAL?.4:.2);if(artReady.portal){ctx.save();ctx.globalAlpha=collected>=GOAL?1:.77;ctx.drawImage(artAssets.portal,px-60,py-94,120,178);ctx.restore()}else{ctx.strokeStyle=collected>=GOAL?'#b1ffd2':'#719c97';ctx.lineWidth=7;ctx.beginPath();ctx.ellipse(px,py,33,71,0,0,TAU);ctx.stroke()}if(collected>=GOAL){for(let j=0;j<8;j++){let yy=py-58+((j*19+t*30)%118);disk(px+Math.sin(t*2+j)*14,yy,2,'#edffd8')}}
  drawActor();drawCombatEffects();for(const q of particles){if(q.x<camX-30||q.x>camX+W+30)continue;ctx.globalAlpha=clamp(q.life/.65,0,1);disk(q.x,q.y,q.r,q.color)}ctx.globalAlpha=1;
- if(pulseRing>0){let k=1-pulseRing/.48;ctx.strokeStyle=`rgba(180,255,220,${1-k})`;ctx.lineWidth=7*(1-k)+1;ctx.beginPath();ctx.arc(pulseX,pulseY,k*156,0,Math.PI*2);ctx.stroke()}
+ if(pulseRing>0){let k=1-pulseRing/.48;ctx.strokeStyle=`rgba(180,255,220,${1-k})`;ctx.lineWidth=7*(1-k)+1;ctx.beginPath();ctx.arc(pulseX,pulseY,k*p.pulseRadius,0,Math.PI*2);ctx.stroke()}
  ctx.restore();};
 
 const _drawForegroundBase = drawForeground;
