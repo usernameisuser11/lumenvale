@@ -43,14 +43,14 @@ canvas{display:block;width:100%;height:100%;touch-action:none}
 .mobile-menu[hidden]{display:none!important}
 @media(pointer:coarse){
  #app{touch-action:none}
- .top{z-index:6;align-items:center;justify-content:space-between;padding:max(5px,env(safe-area-inset-top)) max(9px,env(safe-area-inset-right));gap:5px}
+ .top{z-index:3;align-items:center;justify-content:space-between;padding:max(5px,env(safe-area-inset-top)) max(9px,env(safe-area-inset-right));gap:5px}
  .top .brand{display:none}
  .top .stats{flex:1;max-width:none;flex-wrap:nowrap;justify-content:flex-start;gap:4px;min-width:0}
  .top .stats .pill{font-size:clamp(9px,1.85vh,12px);padding:5px 8px;white-space:nowrap;border-color:#b9ffe432;background:#041b27a5}
  .top #essence,.top #upgradeAccess,.top #ability,.top #kills,.top #capture,.top #music,.top #sound,.top #volume{display:none!important}
  #mobileMenuToggle{display:grid;place-items:center;pointer-events:auto;flex-shrink:0;min-width:36px;min-height:33px;font-size:19px;border:1px solid #a5e9d570;border-radius:11px;background:#062632cb;color:#dcfff1}
  .music-meta{display:none}
- .weaponbar{z-index:6;left:max(8px,env(safe-area-inset-left));right:auto;top:clamp(36px,8.2vh,48px);bottom:auto;transform:none;display:flex;flex-direction:column;align-items:stretch;gap:3px;padding:3px;background:#072533b8;border-radius:11px;max-width:45%;box-shadow:0 3px 16px #0006}
+ .weaponbar{z-index:3;left:max(8px,env(safe-area-inset-left));right:auto;top:clamp(36px,8.2vh,48px);bottom:auto;transform:none;display:flex;flex-direction:column;align-items:stretch;gap:3px;padding:3px;background:#072533b8;border-radius:11px;max-width:45%;box-shadow:0 3px 16px #0006}
  #mobileWeaponToggle{display:block;pointer-events:auto;border:0;background:transparent;color:#d7ffef;font-weight:750;font-size:clamp(9px,1.7vh,12px);padding:5px 8px;white-space:nowrap}
  .weaponbar:not(.open) .weapon{display:none}
  .weaponbar.open .weapon{display:flex;min-width:0;width:100%;padding:5px 7px;gap:5px}
