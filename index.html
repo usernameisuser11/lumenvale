@@ -113,7 +113,7 @@ function sprite(name,index,fw,fh,dx,dy,dw,dh){
 }
 const el=id=>document.getElementById(id),overlay=el('overlay'),startButton=el('start'),howButton=el('how'),message=el('message');
 let mode='menu',t=0,camX=0,camY=0,last=0,acc=0,toastLeft=0,soundOn=false,audio=null,pulseRing=0,pulseX=0,pulseY=0,shake=0,winTime=0;
-let weaponIndex=0,startWeapon=0,kills=0,shots=[],enemyShots=[],floatText=[],slashFx=[],musicOn=false,musicGain=null,windSource=null,musicNext=0,musicBeat=0,musicVolume=0.5,windGain=null;
+let weaponIndex=0,startWeapon=0,kills=0,shots=[],enemyShots=[],floatText=[],slashFx=[],musicOn=false,musicGain=null,windSource=null,musicNext=0,musicBeat=0,musicVolume=0.45,windGain=null;
 let p,particles=[],lights=[],enemies=[],shards=[],checkpoints=[],moving=[],collected=0,deaths=0,activeCheckpoint=0,platforms=[],shrines=[],playSeconds=0,chapterSeen=0,selectedShrine=null,upgradeOptions=[],upgradeCount=0;
 const chapters=['달빛이 깨어나는 숲','잊힌 뿌리의 회랑','이끼 낀 별의 사원','안개 아래 잠든 강','새벽의 마지막 성역'];
 const upgrades=[{id:'heart',icon:'♥',name:'생명의 잎',desc:'최대 체력 +1 · 체력 모두 회복'},{id:'speed',icon:'➜',name:'바람의 발걸음',desc:'이동 속도 +8%'},{id:'pulse',icon:'✺',name:'정령의 파동',desc:'공격 범위 +20 · 재사용 대기시간 감소'},{id:'dash',icon:'◈',name:'유성의 대시',desc:'대시 거리 +12%'},{id:'jump',icon:'↑',name:'하늘의 도약',desc:'점프 높이 강화'},{id:'weapon',icon:'⚔',name:'정령의 무기',desc:'모든 무기 공격력 +1'}];
@@ -288,7 +288,7 @@ el('volume').addEventListener('click',()=>{
 });
 function note(text,dur=2.3){message.textContent=text;message.style.opacity='1';toastLeft=dur}
 function clock(sec){const a=Math.floor(sec);return String(Math.floor(a/60)).padStart(2,'0')+':'+String(a%60).padStart(2,'0')}
-function hud(){el('hearts').textContent='♥ '+p.hp+'/'+p.maxHp;el('light').innerHTML='✦ <b>'+collected+'</b> / '+GOAL;el('level').textContent='LV '+(upgradeCount+1);el('time').textContent=clock(playSeconds);el('ability').textContent=p.dashReady?'대시 ◈':'대시 ◇';el('kills').textContent='⚔ '+kills;el('mobileStats').textContent='LV '+(upgradeCount+1)+' · '+clock(playSeconds)+' · 정수 '+el('essence').textContent+' · 처치 '+kills}
+function hud(){el('hearts').textContent='♥ '+p.hp+'/'+p.maxHp;el('light').innerHTML='✦ <b>'+collected+'</b> / '+GOAL;el('level').textContent='LV '+(upgradeCount+1);el('time').textContent=clock(playSeconds);el('ability').textContent=p.dashReady?'대시 ◈':'대시 ◇';el('kills').textContent='⚔ '+kills;el('mobileStats').textContent='LV '+(upgradeCount+1)+' · '+clock(playSeconds)+' · 정수 '+essence+' · 처치 '+kills}
 const baseGrounds=[[0,720],[850,1495],[1660,2320],[2470,3120],[3290,3890],[4055,5230]];
 const grounds=Array.from({length:CHAPTERS},(_,c)=>baseGrounds.map(([a,b])=>[a+c*CHAPTER,b+c*CHAPTER])).flat();
 function makeWorld(){
@@ -345,17 +345,48 @@ const keys={ArrowLeft:'left',KeyA:'left',ArrowRight:'right',KeyD:'right',ArrowUp
 window.addEventListener('keydown',e=>{if(e.code==='Escape'&&el('mobileSettings').classList.contains('open')){e.preventDefault();closeMobileMenu();return}if(keys[e.code]||['Digit1','Digit2','Digit3'].includes(e.code)||e.code==='Escape'||e.code==='Enter'||e.code==='KeyP'||(mode==='upgrade'&&['Digit1','Digit2','Digit3','Numpad1','Numpad2','Numpad3'].includes(e.code)))e.preventDefault();if(e.code==='KeyP'){if(!e.repeat)togglePhoto();return}if(mode==='photo'){if(e.code==='Escape')togglePhoto();return}if(mode==='upgrade'){if(['Digit1','Digit2','Digit3','Numpad1','Numpad2','Numpad3'].includes(e.code))chooseUpgrade(Number(e.code.slice(-1))-1);return}if(e.code==='Escape'){pause();return}if(mode==='playing'&&['Digit1','Digit2','Digit3'].includes(e.code)){setWeapon(Number(e.code.slice(-1))-1);return}if(e.code==='Enter'&&mode!=='playing'){if(mode==='paused')pause();else play();return}if(keys[e.code])setInput(keys[e.code],true)});
 window.addEventListener('keyup',e=>{if(keys[e.code]){e.preventDefault();setInput(keys[e.code],false)}});
 // 캡처 도구(Win+Shift+S 등)로 포커스가 빠져도 계속하기 창을 띄우지 않는다.
-window.addEventListener('blur',()=>{Object.keys(input).forEach(k=>input[k]=false);Object.keys(just).forEach(k=>just[k]=false)});
-for(const btn of document.querySelectorAll('[data-key]')){const k=btn.dataset.key;btn.addEventListener('pointerdown',e=>{e.preventDefault();try{btn.setPointerCapture(e.pointerId)}catch(_){}btn.classList.add('pressed');setInput(k,true)});for(const ev of ['pointerup','pointercancel','lostpointercapture'])btn.addEventListener(ev,e=>{e.preventDefault();btn.classList.remove('pressed');setInput(k,false)})}
+// Keep every active pointer per key; lifting one finger must not cancel another.
+const touchPointerHolds=new Map();
+function clearTouchControls(){
+ touchPointerHolds.clear();
+ document.querySelectorAll('[data-key]').forEach(btn=>btn.classList.remove('pressed'));
+ Object.keys(input).forEach(k=>input[k]=false);
+ Object.keys(just).forEach(k=>just[k]=false);
+}
+window.addEventListener('blur',clearTouchControls);
+for(const btn of document.querySelectorAll('[data-key]')){
+ const k=btn.dataset.key;
+ btn.addEventListener('pointerdown',e=>{
+  e.preventDefault();
+  let held=touchPointerHolds.get(k);if(!held){held=new Set();touchPointerHolds.set(k,held)}
+  held.add(e.pointerId);
+  try{btn.setPointerCapture(e.pointerId)}catch(_){}
+  btn.classList.add('pressed');setInput(k,true);
+ });
+ for(const event of ['pointerup','pointercancel','lostpointercapture'])btn.addEventListener(event,e=>{
+  e.preventDefault();
+  const held=touchPointerHolds.get(k);if(!held)return;
+  held.delete(e.pointerId);
+  if(held.size)return;
+  touchPointerHolds.delete(k);
+  btn.classList.remove('pressed');setInput(k,false);
+ });
+}
 
 // Mobile controls delegate to the original game's audio, photo and pause handlers.
 const mobileMenu=el('mobileSettings'),mobileToggle=el('mobileMenuToggle');
-function closeMobileMenu(){mobileMenu.classList.remove('open');mobileToggle.setAttribute('aria-expanded','false')}
+let pausedForMobileSettings=false;
+function closeMobileMenu(){
+ mobileMenu.classList.remove('open');mobileToggle.setAttribute('aria-expanded','false');
+ if(pausedForMobileSettings){pausedForMobileSettings=false;mode='playing';last=performance.now();acc=0}
+}
 function syncMobileAudio(){el('mobileMusic').textContent=el('music').textContent;el('mobileSound').textContent=el('sound').textContent;el('mobileVolume').textContent='음악 볼륨 · '+el('volume').textContent}
 mobileToggle.addEventListener('click',()=>{
- const open=!mobileMenu.classList.contains('open');mobileMenu.classList.toggle('open',open);
- mobileToggle.setAttribute('aria-expanded',String(open));
- if(open){el('weaponBar').classList.remove('expanded');syncMobileAudio();hud()}
+ const open=!mobileMenu.classList.contains('open');
+ if(!open){closeMobileMenu();return}
+ mobileMenu.classList.add('open');mobileToggle.setAttribute('aria-expanded','true');
+ if(mode==='playing'){pausedForMobileSettings=true;mode='paused';clearTouchControls();acc=0}
+ el('weaponBar').classList.remove('expanded');syncMobileAudio();hud();
 });
 el('mobileClose').addEventListener('click',closeMobileMenu);
 el('mobileMusic').addEventListener('click',()=>{el('music').click();syncMobileAudio()});
@@ -1024,11 +1055,11 @@ const skillShop=[
 {id:'tempo',icon:'✦',name:'전투 감각',desc:'세 무기 재사용 대기시간 -8%',cost:n=>9+n*8,max:5},
 {id:'pulse',icon:'❋',name:'파동 강화',desc:'파동 범위 +16 · 쿨타임 -0.25초',cost:n=>8+n*7,max:5}];
 const _hudOriginal=hud;
-hud=function(){_hudOriginal();const cheapest=Math.min(...skillShop.filter(u=>skillLevels[u.id]<u.max).map(u=>u.cost(skillLevels[u.id])),999);el('essence').textContent='정수 '+essence+' / '+(cheapest===999?'MAX':cheapest);const cp=nearestCheckpoint();checkpointReady=!!cp;const b=el('upgradeAccess');b.classList.toggle('ready',!!cp&&essence>=cheapest);b.style.opacity=cp?'1':'.45'};
+hud=function(){_hudOriginal();const cheapest=Math.min(...skillShop.filter(u=>skillLevels[u.id]<u.max).map(u=>u.cost(skillLevels[u.id])),999);el('essence').textContent='정수 '+essence+' / '+(cheapest===999?'MAX':cheapest);el('mobileStats').textContent='LV '+(upgradeCount+1)+' · '+clock(playSeconds)+' · 정수 '+essence+' / '+(cheapest===999?'MAX':cheapest)+' · 처치 '+kills;const cp=nearestCheckpoint();checkpointReady=!!cp;const b=el('upgradeAccess');b.classList.toggle('ready',!!cp&&essence>=cheapest);b.style.opacity=cp?'1':'.45'};
 function nearestCheckpoint(){if(!p)return null;return checkpoints.find(cp=>Math.abs(cp.x-(p.x+12))<105&&Math.abs(cp.y-(p.y+p.h))<164)||null}
-function snapshot(){return {version:3,cp:activeCheckpoint,collected,essence,skills:{...skillLevels},upgrades:upgradeCount,kills,playSeconds,deaths,weaponIndex,lights:lights.map(l=>!!l.got),dead:enemies.map(e=>!e.alive),hp:p.hp,maxHp:p.maxHp,speed:p.speed,weaponBonus:p.weaponBonus,pulseRadius:p.pulseRadius,pulseDelay:p.pulseDelay}};
+function snapshot(){return {version:3,cp:activeCheckpoint,checkpointFlags:checkpoints.map(cp=>!!cp.on),collected,essence,skills:{...skillLevels},upgrades:upgradeCount,kills,playSeconds,deaths,weaponIndex,lights:lights.map(l=>!!l.got),dead:enemies.map(e=>!e.alive),hp:p.hp,maxHp:p.maxHp,speed:p.speed,weaponBonus:p.weaponBonus,pulseRadius:p.pulseRadius,pulseDelay:p.pulseDelay}};
 function saveGame(silent=false){try{localStorage.setItem(SAVE_KEY,JSON.stringify(snapshot()));el('continue').style.display='inline-block';if(!silent)note('✦ 숲의 기억 저장됨 · 재접속 후 이어하기 가능',2)}catch(_){if(!silent)note('브라우저 저장이 제한돼 있어 · Render 주소에서 다시 확인해줘',3)}}
-function loadGame(){let data;try{data=JSON.parse(localStorage.getItem(SAVE_KEY)||'null')}catch(_){data=null}if(!data||data.version!==3)return;reset();const cp=checkpoints[clamp(Number(data.cp)||0,0,checkpoints.length-1)];activeCheckpoint=checkpoints.indexOf(cp);cp.on=true;p.x=cp.x;p.y=cp.y-p.h;p.inv=2;p.maxHp=clamp(Number(data.maxHp)||3,3,9);p.hp=clamp(Number(data.hp)||p.maxHp,1,p.maxHp);p.speed=Number(data.speed)||260;p.weaponBonus=Number(data.weaponBonus)||0;p.pulseRadius=Number(data.pulseRadius)||151;p.pulseDelay=Number(data.pulseDelay)||3.6;essence=Math.max(0,Number(data.essence)||0);skillLevels={heart:0,weapon:0,tempo:0,pulse:0,...data.skills};upgradeCount=Math.max(0,Number(data.upgrades)||0);collected=Math.max(0,Number(data.collected)||0);kills=Math.max(0,Number(data.kills)||0);playSeconds=Math.max(0,Number(data.playSeconds)||0);deaths=Math.max(0,Number(data.deaths)||0);(data.lights||[]).forEach((got,i)=>{if(lights[i])lights[i].got=!!got});(data.dead||[]).forEach((dead,i)=>{if(dead&&enemies[i]){enemies[i].alive=false;enemies[i].hp=0}});setWeapon(clamp(Number(data.weaponIndex)||0,0,2),false);camX=clamp(p.x-240,0,WORLD-W);mode='playing';overlay.classList.add('hidden');last=performance.now();note('저장된 숲의 기억에서 여정을 이어가자!',2.5);hud();if(musicOn)startMusic()}
+function loadGame(){let data;try{data=JSON.parse(localStorage.getItem(SAVE_KEY)||'null')}catch(_){data=null}if(!data||data.version!==3)return;reset();const cp=checkpoints[clamp(Number(data.cp)||0,0,checkpoints.length-1)];activeCheckpoint=checkpoints.indexOf(cp);checkpoints.forEach((point,i)=>{point.on=Array.isArray(data.checkpointFlags)?!!data.checkpointFlags[i]:i<=activeCheckpoint});cp.on=true;p.x=cp.x;p.y=cp.y-p.h;p.inv=2;p.maxHp=clamp(Number(data.maxHp)||3,3,9);p.hp=clamp(Number(data.hp)||p.maxHp,1,p.maxHp);p.speed=Number(data.speed)||260;p.weaponBonus=Number(data.weaponBonus)||0;p.pulseRadius=Number(data.pulseRadius)||151;p.pulseDelay=Number(data.pulseDelay)||3.6;essence=Math.max(0,Number(data.essence)||0);skillLevels={heart:0,weapon:0,tempo:0,pulse:0,...data.skills};upgradeCount=Math.max(0,Number(data.upgrades)||0);collected=Math.max(0,Number(data.collected)||0);kills=Math.max(0,Number(data.kills)||0);playSeconds=Math.max(0,Number(data.playSeconds)||0);deaths=Math.max(0,Number(data.deaths)||0);(data.lights||[]).forEach((got,i)=>{if(lights[i])lights[i].got=!!got});(data.dead||[]).forEach((dead,i)=>{if(dead&&enemies[i]){enemies[i].alive=false;enemies[i].hp=0}});setWeapon(clamp(Number(data.weaponIndex)||0,0,2),false);camX=clamp(p.x-240,0,WORLD-W);mode='playing';overlay.classList.add('hidden');last=performance.now();note('저장된 숲의 기억에서 여정을 이어가자!',2.5);hud();if(musicOn)startMusic()}
 el('continue').addEventListener('click',loadGame);
 try{if(JSON.parse(localStorage.getItem(SAVE_KEY)||'null')?.version===3)el('continue').style.display='inline-block'}catch(_){}
 function leaveShop(){if(mode!=='upgrade')return;mode='playing';selectedShrine=null;el('upgrade').classList.remove('open');last=performance.now();acc=0;hud()}
