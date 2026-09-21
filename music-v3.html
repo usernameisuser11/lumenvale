@@ -196,7 +196,7 @@ function musicMix(){
 function musicScene(sc,bus,beat,start,step,combat){
  const bar=Math.floor(beat/8);
  if(beat%8===0){
-  const base=sc.chords[bar%sc.chords.length];
+  const chords=sc.chords||[0,3,5,2],base=chords[bar%chords.length];
   for(const offset of [0,2,4])musicVoice(musicPitch(sc,base+offset,-1),start,step*8+.4,combat?.011:.013,'strings',.85,combat?1050:850,bus);
   musicVoice(musicPitch(sc,base,-2),start,step*8+.4,combat?.023:.016,'sine',.9,400,bus);
  }
