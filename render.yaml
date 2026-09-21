@@ -1,0 +1,6 @@
+services:
+  - type: web
+    runtime: static
+    name: lumenvale-wildlight
+    buildCommand: echo "Static game ready"
+    staticPublishPath: .
