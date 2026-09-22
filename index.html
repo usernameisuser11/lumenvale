@@ -1575,15 +1575,22 @@ const LiquidSystem=(()=>{
     'return mix(mix(rand(i),rand(i+vec2(1.,0.)),f.x),mix(rand(i+vec2(0.,1.)),rand(i+1.),f.x),f.y);}',
     'void main(){vec2 p=tex;float time=clock*.38;',
     'float warp=noise(vec2(p.x*6.0+clock*.14,p.y*3.4+time))-.5;',
-    'float width=.445+warp*.095+sin(p.y*15.+clock*1.8+p.x*14.)*.012;',
-    'float edge=1.-smoothstep(width-.075,width+.018,abs(p.x-.5));',
+    'float fall=1.-p.y;',
+    'float spread=smoothstep(.00,.76,fall);',
+    'float bend=(noise(vec2(fall*4.2,clock*.28))-.5)*.036;',
+    'float width=.195+.145*spread+warp*.058+sin(fall*21.+clock*1.6)*.009;',
+    'float center=.5+bend+sin(fall*6.+clock*.65)*.013;',
+    'float edge=1.-smoothstep(width-.065,width+.005,abs(p.x-center));',
     'float n1=noise(vec2(p.x*14.+warp*2.1,p.y*7.+time*3.2));',
     'float n2=noise(vec2(p.x*39.+n1*2.,p.y*14.+time*6.9));',
     'float n3=noise(vec2(p.x*9.+warp,p.y*31.+time*9.));',
     'float flowing=n1*.42+n2*.40+n3*.18;',
     'float ribbon=sin(p.x*81.+warp*14.+n1*8.)*.5+.5;',
     'float luminance=clamp(flowing*.85+ribbon*.26,0.,1.);',
-    'float alpha=edge*(.30+luminance*.64);',
+    'float topFade=smoothstep(.0,.085,fall);',
+    'float baseFade=1.-smoothstep(.88,1.,fall);',
+    'float ragged=clamp(.73+.40*n2+.20*sin(p.x*94.+fall*15.+clock*1.3),.20,1.);',
+    'float alpha=edge*topFade*baseFade*ragged*(.18+luminance*.69);',
     'vec3 color=mix(vec3(.18,.52,.65),vec3(.82,1.,.99),luminance);',
     'gl_FragColor=vec4(color,alpha);}'
    ].join(String.fromCharCode(10)));
@@ -1607,42 +1614,61 @@ const LiquidSystem=(()=>{
  }
  function waterfallFlow(cx,top,depth){
   if(cx<camX-160||cx>camX+W+160)return;
-  const width=100+Math.sin(cx*.021)*8,base=top+depth;
+  const width=99+Math.sin(cx*.021)*8,base=top+depth;
   ctx.save();
+  // The shader now owns the silhouette: a narrow, broken lip widens into a naturally frayed fall.
   if(updateGPU()){
-   ctx.globalAlpha=.92;ctx.drawImage(surface,cx-width*.62,top-11,width*1.24,depth+22);ctx.globalAlpha=1;
+   ctx.globalAlpha=.95;
+   ctx.drawImage(surface,cx-width*.72,top-6,width*1.44,depth+14);
+   ctx.globalAlpha=1;
   }else{
-   for(let i=0;i<14;i++){
-    const x=cx-width*.45+i*width/14,w=7+Math.sin(i*13)*2.3,d=Math.sin(t*1.7+i*1.4)*3;
-    const stream=ctx.createLinearGradient(x-w,0,x+w,0);
-    stream.addColorStop(0,'rgba(58,163,195,0)');
-    stream.addColorStop(.5,'rgba(191,251,255,'+(.31+(i%4)*.10)+')');
-    stream.addColorStop(1,'rgba(97,216,236,0)');
-    ctx.fillStyle=stream;ctx.beginPath();ctx.moveTo(x-w,top);
-    ctx.bezierCurveTo(x-w+d,top+depth*.28,x-w-d,top+depth*.68,x-w,base);
-    ctx.lineTo(x+w,base);
-    ctx.bezierCurveTo(x+w+d,top+depth*.66,x+w-d,top+depth*.32,x+w,top);
+   // Per-stream ribbons follow a curved path; no common rectangular outer edge.
+   for(let i=0;i<17;i++){
+    const offset=(i-8)*width*.053,w=4.1+(i%5)*.8;
+    const x=cx+offset,bend=Math.sin(t*.8+i*1.9)*2.8;
+    const opacity=.16+(i%4)*.085;
+    const ribbon=ctx.createLinearGradient(x-w,0,x+w,0);
+    ribbon.addColorStop(0,'rgba(75,173,205,0)');
+    ribbon.addColorStop(.5,'rgba(210,253,255,'+opacity+')');
+    ribbon.addColorStop(1,'rgba(89,214,230,0)');
+    ctx.fillStyle=ribbon;
+    ctx.beginPath();ctx.moveTo(x-w*.34,top+3+Math.sin(i)*4);
+    ctx.bezierCurveTo(x-w+bend,top+depth*.27,x-w-bend,top+depth*.68,x-w*.8,base-17);
+    ctx.quadraticCurveTo(x,base+Math.sin(i*4)*6,x+w*.7,base-15);
+    ctx.bezierCurveTo(x+w-bend,top+depth*.68,x+w+bend,top+depth*.27,x+w*.34,top+2+Math.sin(i)*4);
     ctx.closePath();ctx.fill();
    }
   }
-  // Sprites of downward turbulence: streams have individual velocities and non-repeating phase.
-  ctx.beginPath();ctx.rect(cx-width*.48,top,width*.96,depth+4);ctx.clip();
+  // Rippling trails share the organic silhouette instead of being clipped to a square.
+  const feather=Math.sin(t*.75+cx*.01)*3;
+  ctx.save();ctx.beginPath();
+  ctx.moveTo(cx-width*.24,top+7);
+  ctx.bezierCurveTo(cx-width*.33-feather,top+depth*.30,cx-width*.46+feather,top+depth*.62,cx-width*.47,base-12);
+  ctx.quadraticCurveTo(cx-width*.35,base+3,cx,base-9);
+  ctx.quadraticCurveTo(cx+width*.35,base+3,cx+width*.47,base-12);
+  ctx.bezierCurveTo(cx+width*.45+feather,top+depth*.62,cx+width*.33-feather,top+depth*.30,cx+width*.24,top+7);
+  ctx.closePath();ctx.clip();
   for(let i=0;i<45;i++){
    const travel=(t*(85+i%7*23)+i*32.7)%(depth+62),y=top-33+travel;
-   const x=cx-width*.43+((i*34.73)%(width*.86))+Math.sin(t*1.8+i)*2.5;
+   const x=cx-width*.42+((i*34.73)%(width*.84))+Math.sin(t*1.8+i)*2.5;
    const a=Math.max(0,Math.min(1,(travel+10)/36,(depth+56-travel)/43));
-   ctx.strokeStyle='rgba(235,255,255,'+((.14+(i%5)*.062)*a)+')';
-   ctx.lineWidth=i%7===0?2.6:1.1;
+   ctx.strokeStyle='rgba(235,255,255,'+((.12+(i%5)*.058)*a)+')';
+   ctx.lineWidth=i%7===0?2.3:1;
    ctx.beginPath();ctx.moveTo(x,y);ctx.bezierCurveTo(x-2,y+10,x+3,y+17,x+Math.sin(t+i)*2,y+25);ctx.stroke();
   }
-  ctx.restore();
-  // Landing collision: spray travels outwards while a new particle generation enters.
+  ctx.restore();ctx.restore();
+  // The origin and landing have particles rather than a straight top and bottom bar.
   ctx.save();ctx.globalCompositeOperation='screen';
-  const fog=ctx.createRadialGradient(cx,base,4,cx,base,width*.80);
-  fog.addColorStop(0,'rgba(212,255,255,.40)');
-  fog.addColorStop(.45,'rgba(160,239,249,.18)');
-  fog.addColorStop(1,'rgba(160,239,249,0)');
-  ctx.fillStyle=fog;ctx.fillRect(cx-width,base-65,width*2,130);
+  for(let i=0;i<13;i++){
+   const x=cx+Math.sin(i*2.48)*width*.25,y=top+Math.cos(i*1.6)*5;
+   ctx.fillStyle='rgba(215,253,255,'+(.12+i%4*.035)+')';
+   ctx.beginPath();ctx.ellipse(x,y,2.2+i%3,1.2+i%2*.6,Math.sin(i),0,TAU);ctx.fill();
+  }
+  const fog=ctx.createRadialGradient(cx,base,3,cx,base,width*.76);
+  fog.addColorStop(0,'rgba(214,255,255,.37)');
+  fog.addColorStop(.47,'rgba(155,236,248,.16)');
+  fog.addColorStop(1,'rgba(155,236,248,0)');
+  ctx.fillStyle=fog;ctx.fillRect(cx-width,base-61,width*2,122);
   for(let i=0;i<39;i++){
    const life=(t*(18+i%6*7)+i*19.8)%88;
    const x=cx+Math.sin(i*2.4)*width*(.13+life/154);
