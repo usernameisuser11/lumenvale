@@ -399,7 +399,9 @@ syncMobileAudio();
 function particlesAt(x,y,n,color,spread=130){for(let i=0;i<n;i++){const a=random()*Math.PI*2,s=(.25+random())*spread;particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s-50,life:.4+random()*.65,max:1,r:1+random()*3,color})}if(particles.length>280)particles.splice(0,particles.length-280)}
 function damage(amount=1,from=0){if(p.inv>0||mode!=='playing')return;p.hp-=amount;p.inv=1.5;shake=9;p.vy=-240;p.vx=from*190;particlesAt(p.x+p.w/2,p.y+18,19,'#f69cb9',195);sound(178,.25,'sawtooth');hud();if(p.hp<=0)respawn()}
 function respawn(){deaths++;const cp=checkpoints[activeCheckpoint];p.x=cp.x;p.y=cp.y-p.h;p.vx=p.vy=0;p.hp=p.maxHp;p.inv=2;p.dashReady=true;p.dashT=0;p.jumps=0;camX=clamp(p.x-280,0,WORLD-W);note('빛은 사라지지 않아. 다시 도전해!',2);particlesAt(p.x,p.y,27,'#7dffdf',150);hud()}
-function solidX(){return platforms.filter(s=>!s.obelisk&&p.x+p.w>s.x+(s.ground?3:13)&&p.x<s.x+s.w-(s.ground?3:13)&&p.y+p.h>s.y+5&&p.y<s.y+s.h-5)}
+// Physical colliders remain intact: floating platform art is only 4px inset.
+function wallInset(s){return s.ground?0:s.obelisk?2:4}
+function solidX(){return platforms.filter(s=>p.x+p.w>s.x+wallInset(s)&&p.x<s.x+s.w-wallInset(s)&&p.y+p.h>s.y+3&&p.y<s.y+s.h-3)}
 // Three genuinely different combat weapons; zero API calls and no contact damage from combat monsters.
 const weaponDefs=[{name:'빛의 검',cool:.32,damage:2},{name:'달빛 활',cool:.39,damage:1},{name:'정령 지팡이',cool:.68,damage:1}];
 function enemyHit(e,amount,from,flavor='sword'){
@@ -441,7 +443,7 @@ function playerAttack(){
   shots.push({x:cx+dir*14,y:cy-2,vx:dir*455,vy:Math.sin(t*2)*15,r:11,damage:def.damage+bonus,kind:'staff',life:1.45,dir});sound(510,.29,'sine',.06);
  }
 }
-function touchSolid(x,y){return platforms.some(s=>!s.obelisk&&x>=s.x&&x<=s.x+s.w&&y>=s.y&&y<=s.y+s.h)}
+function touchSolid(x,y){return platforms.some(s=>x>=s.x+wallInset(s)&&x<=s.x+s.w-wallInset(s)&&y>=s.y&&y<=s.y+s.h)}
 function updateProjectiles(dt){
  for(const sh of shots){sh.x+=sh.vx*dt;sh.y+=sh.vy*dt;sh.life-=dt;
   const target=enemies.find(e=>e.alive&&circleHitsEnemy(sh.x,sh.y,sh.r,e));
@@ -495,9 +497,9 @@ function step(dt){t+=dt;playSeconds+=dt;if(Math.floor(playSeconds*2)!==Math.floo
  if(p.jumpBuffer>0){if(p.coyote>0){p.vy=-505-p.jumpBoost;p.onGround=false;p.coyote=0;p.jumps=1;p.jumpBuffer=0;sound(510,.12);particlesAt(p.x+12,p.y+34,9,'#93fff0',85)}else if(p.wall&&p.vy>=-160){p.vy=-490-p.jumpBoost;p.vx=-p.wall*325;p.face=-p.wall;p.jumps=1;p.jumpBuffer=0;p.dashReady=true;sound(620,.14);particlesAt(p.x+12,p.y+19,12,'#b4fdf4',130)}else if(p.jumps<2&&!p.onGround){p.vy=-450-p.jumpBoost;p.jumps=2;p.jumpBuffer=0;sound(710,.17);particlesAt(p.x+12,p.y+18,19,'#b8eaff',140)}}
  if(p.dashT>0){p.dashT=Math.max(0,p.dashT-dt);p.vx=p.dashDir*p.dashSpeed;p.vy=0;particlesAt(p.x+12,p.y+19,2,'#8df3d3',55)}else{const target=direction*p.speed;const rate=p.onGround?2200:1400;p.vx+=clamp(target-p.vx,-rate*dt,rate*dt);p.vy+=1340*dt;if(!input.jump&&p.vy<0)p.vy+=1100*dt;p.vy=Math.min(p.vy,800)}
  let oldX=p.x;p.x+=p.vx*dt;p.wall=0;p.x=clamp(p.x,0,WORLD-p.w);for(const b of bosses){if(b.alive&&p.x>=b.x+112&&oldX<b.x+150&&oldX>b.x-170){p.x=b.x+112;p.vx=0;p.dashT=0;if(!b.gateWarn||t-b.gateWarn>3){note("수호자를 정화해야 길이 열려!",1.4);b.gateWarn=t}}}
- for(const s of solidX()){const inset=s.ground?3:13,left=s.x+inset,right=s.x+s.w-inset;if(p.vx>0&&oldX+p.w<=left+9){p.x=left-p.w;p.wall=1;p.vx=0;p.dashT=0}else if(p.vx<0&&oldX>=right-9){p.x=right;p.wall=-1;p.vx=0;p.dashT=0}}
+ for(const s of solidX()){const inset=wallInset(s),left=s.x+inset,right=s.x+s.w-inset;if(p.vx>0&&oldX+p.w<=left+8){p.x=left-p.w;p.wall=1;p.vx=0;p.dashT=0}else if(p.vx<0&&oldX>=right-8){p.x=right;p.wall=-1;p.vx=0;p.dashT=0}}
  const oldY=p.y;p.y+=p.vy*dt;p.onGround=false;
- for(const s of platforms){if(s.obelisk||p.x+p.w-4<=s.x||p.x+4>=s.x+s.w||p.y+p.h<=s.y||p.y>=s.y+s.h)continue;
+ for(const s of platforms){if(p.x+p.w-4<=s.x||p.x+4>=s.x+s.w||p.y+p.h<=s.y||p.y>=s.y+s.h)continue;
  if(p.vy>=0&&oldY+p.h<=s.y+12){p.y=s.y-p.h;p.vy=0;p.onGround=true;p.jumps=0;p.dashReady=true}
  else if(p.vy<0&&oldY>=s.y+s.h-9){p.y=s.y+s.h;p.vy=15}
  }
@@ -1550,41 +1552,86 @@ drawBossShade=readableBoss(drawBossShade,'rgba(214,160,255,ALPHA)',74);
 // ==== END v2.7 PASS ====
 
 // ==== v2.8: flowing falls and three separate guardian combat styles ====
+// v2.9: A real animated waterfall, not a pale rectangular illustration.
 const previousFallV28=waterfall;
 waterfall=function(cx,top,depth){
  if(cx<camX-180||cx>camX+W+180)return;
- const w=118+Math.sin(cx*.07)*8,sway=Math.sin(t*1.25+cx*.02)*5;
+ const width=106+Math.sin(cx*.07)*7,base=top+depth,phase=t*1.45+cx*.018;
  ctx.save();
- const curtain=ctx.createLinearGradient(cx-w*.52,0,cx+w*.52,0);
- curtain.addColorStop(0,'rgba(120,236,240,0)');
- curtain.addColorStop(.18,'rgba(165,241,246,.18)');
- curtain.addColorStop(.48,'rgba(239,255,255,.48)');
- curtain.addColorStop(.82,'rgba(135,232,240,.18)');
- curtain.addColorStop(1,'rgba(120,236,240,0)');
- ctx.fillStyle=curtain;ctx.beginPath();ctx.moveTo(cx-w*.44+sway*.12,top);
- ctx.bezierCurveTo(cx-w*.56+sway,top+depth*.28,cx-w*.26-sway*.25,top+depth*.67,cx-w*.34+sway*.08,top+depth);
- ctx.lineTo(cx+w*.31+sway*.1,top+depth);
- ctx.bezierCurveTo(cx+w*.23+sway*.15,top+depth*.66,cx+w*.56-sway*.35,top+depth*.3,cx+w*.41-sway*.08,top);
- ctx.closePath();ctx.fill();
- ctx.beginPath();ctx.rect(cx-w*.34,top+8,w*.68,depth-3);ctx.clip();
- for(let j=0;j<27;j++){
-  const x=cx-w*.29+((j*37.7+Math.sin(j*7.12)*17)%(w*.58));
-  const travel=(t*(78+j%5*21)+j*53.7)%(depth+55),y=top-28+travel;
-  const fade=Math.max(0,Math.min(1,(travel+16)/45,(depth+30-travel)/60));
-  if(!fade)continue;
-  ctx.globalAlpha=(.12+(j%4)*.05)*fade;ctx.strokeStyle=j%3===0?'#f3ffff':'#b8ecff';ctx.lineWidth=j%5===0?2.5:1.1;
-  ctx.beginPath();ctx.moveTo(x+Math.sin(t*1.8+j)*2,y);
-  ctx.quadraticCurveTo(x-3,y+7,x+Math.sin(t*1.3+j)*4,y+12+j%5*3);ctx.stroke();
+ ctx.globalAlpha=1;
+ ctx.globalCompositeOperation='source-over';
+ // Behind the falling water, a soft deep cyan shaft gives the stream body without a hard rectangle.
+ let mist=ctx.createRadialGradient(cx,top+depth*.49,width*.11,cx,top+depth*.49,width*.87);
+ mist.addColorStop(0,'rgba(78,173,184,.20)');
+ mist.addColorStop(.65,'rgba(52,130,153,.11)');
+ mist.addColorStop(1,'rgba(52,130,153,0)');
+ ctx.fillStyle=mist;ctx.fillRect(cx-width,top-16,width*2,depth+42);
+ // Several animated uneven sheets instead of one straight translucent banner.
+ for(let layer=0;layer<7;layer++){
+  const spread=(layer-3)*width*.103,depthSway=Math.sin(phase+layer*1.7)*3.5;
+  const strandWidth=[16,19,20,25,19,17,14][layer];
+  const opacity=[.22,.31,.37,.48,.36,.31,.20][layer];
+  const g=ctx.createLinearGradient(cx+spread-strandWidth,0,cx+spread+strandWidth,0);
+  g.addColorStop(0,'rgba(124,224,238,0)');
+  g.addColorStop(.25,'rgba(149,231,239,'+(opacity*.53)+')');
+  g.addColorStop(.5,'rgba(222,255,254,'+opacity+')');
+  g.addColorStop(.78,'rgba(127,216,237,'+(opacity*.59)+')');
+  g.addColorStop(1,'rgba(109,199,221,0)');
+  ctx.fillStyle=g;ctx.beginPath();
+  const x=cx+spread,sw=Math.sin(phase*.75+layer)*2.8;
+  ctx.moveTo(x-strandWidth*.48+sw,top);
+  ctx.bezierCurveTo(x-strandWidth*.72+depthSway,top+depth*.28,x-strandWidth*.39-sw,top+depth*.67,x-strandWidth*.44+sw,base);
+  ctx.lineTo(x+strandWidth*.52+sw,base);
+  ctx.bezierCurveTo(x+strandWidth*.62-sw,top+depth*.69,x+strandWidth*.58+depthSway,top+depth*.29,x+strandWidth*.45+sw,top);
+  ctx.closePath();ctx.fill();
  }
- ctx.restore();ctx.save();ctx.globalCompositeOperation='screen';
- for(let i=0;i<24;i++){
-  const dx=(((t*(19+i%6*13)+i*27)%(w*1.4))-w*.7)*Math.sin(i*2.4),dy=(i*17.3+t*(8+i%4*5))%60;
-  const x=cx+dx,y=top+depth-10-dy,a=(1-dy/65)*.19;
-  ctx.fillStyle='rgba(226,255,255,'+a+')';ctx.beginPath();ctx.arc(x,y,1.3+i%4*.45,0,TAU);ctx.fill();
+ // Brighter turbulence slides down the stream every frame; the strokes loop at separate speeds.
+ ctx.save();ctx.beginPath();
+ ctx.moveTo(cx-width*.47,top+3);ctx.bezierCurveTo(cx-width*.60,top+depth*.34,cx-width*.45,top+depth*.73,cx-width*.48,base+4);
+ ctx.lineTo(cx+width*.48,base+4);
+ ctx.bezierCurveTo(cx+width*.44,top+depth*.66,cx+width*.58,top+depth*.36,cx+width*.47,top+3);
+ ctx.closePath();ctx.clip();
+ for(let i=0;i<58;i++){
+  const speed=88+(i%9)*15,run=(t*speed+i*57.17)%(depth+62),y=top-36+run;
+  const x=cx+((i*37.23+Math.sin(i*4.9)*18)%(width*.80))-width*.40;
+  const fade=Math.max(0,Math.min(1,(run+8)/35,(depth+50-run)/55));
+  ctx.strokeStyle=i%4===0?'rgba(240,255,255,'+(.38*fade)+')':'rgba(162,241,252,'+(.15+(i%5)*.055)*fade+')';
+  ctx.lineWidth=i%9===0?3.2:1.1+(i%3)*.43;
+  const sway=Math.sin(phase+i*2.2+y*.021)*3.5;
+  ctx.beginPath();ctx.moveTo(x+sway,y);
+  ctx.bezierCurveTo(x+sway-2,y+9,x-sway*.7,y+17,x+sway*.45,y+22+i%5*4);
+  ctx.stroke();
  }
- const fog=ctx.createRadialGradient(cx,top+depth,4,cx,top+depth,w*.7);
- fog.addColorStop(0,'rgba(200,255,255,.26)');fog.addColorStop(1,'rgba(200,255,255,0)');
- ctx.fillStyle=fog;ctx.fillRect(cx-w,top+depth-48,2*w,96);ctx.restore();
+ // Broad, flowing wavelets keep the middle from reading as a flat texture.
+ ctx.globalCompositeOperation='screen';
+ for(let i=0;i<11;i++){
+  const y=top+((t*(85+i%4*19)+i*37.6)%Math.max(30,depth));
+  const xx=cx+Math.sin(phase+i*1.83)*width*.25;
+  ctx.strokeStyle='rgba(218,255,255,'+(.11+(i%3)*.04)+')';
+  ctx.lineWidth=2+i%3;
+  ctx.beginPath();ctx.moveTo(xx-14,y);
+  ctx.quadraticCurveTo(xx,y+4,xx+14,y-2);ctx.stroke();
+ }
+ ctx.restore();
+ // A naturally feathered lip and active foam at the base, not a squared-off cap.
+ ctx.save();ctx.globalCompositeOperation='screen';
+ const lip=ctx.createRadialGradient(cx,top,1,cx,top,width*.57);
+ lip.addColorStop(0,'rgba(232,255,255,.26)');lip.addColorStop(1,'rgba(232,255,255,0)');
+ ctx.fillStyle=lip;ctx.fillRect(cx-width*.6,top-27,width*1.2,54);
+ const foam=ctx.createRadialGradient(cx,base,4,cx,base,width*.72);
+ foam.addColorStop(0,'rgba(220,255,255,.39)');
+ foam.addColorStop(.43,'rgba(172,242,255,.21)');
+ foam.addColorStop(1,'rgba(142,233,255,0)');
+ ctx.fillStyle=foam;ctx.fillRect(cx-width,base-55,width*2,110);
+ for(let i=0;i<44;i++){
+  const cycle=(t*(19+i%7*8)+i*17.3)%88;
+  const x=cx+Math.sin(i*2.399)*((i*13)%width)*(.55+cycle/170);
+  const y=base+7-cycle*.75+Math.sin(i*1.9)*4;
+  const opacity=(1-cycle/88)*(.10+(i%4)*.065);
+  ctx.fillStyle='rgba(219,254,255,'+opacity+')';
+  ctx.beginPath();ctx.arc(x,y,1.0+(i%5)*.35,0,TAU);ctx.fill();
+ }
+ ctx.restore();ctx.restore();
 };
 const makeWorldBeforeV28=makeWorld;
 makeWorld=function(){
