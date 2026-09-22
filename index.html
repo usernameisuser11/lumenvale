@@ -1857,89 +1857,107 @@ function fallLanding(x,top,depth){
  const onGround=grounds.some(([a,b])=>x>=a+12&&x<=b-12);
  return Math.max(top+55,Math.min(top+depth,onGround?610:635));
 }
+// v3.0: ASYMMETRIC RAVINE MERGE, geometry lifted from local preview while preserving live liquid and sword.
 function fallRockGeometry(cx,top,depth,foreground){
- if(cx<camX-180||cx>camX+W+180)return;
- const bottom=top+depth,seed=Math.sin(cx*.0134),w=102+seed*7;
- const chapter=clamp(Math.floor(cx/CHAPTER),0,4);
- const palette=[
-  ['#122e39','#2a4750','#48716a'],
-  ['#1e3531','#385649','#638a65'],
-  ['#1d2848','#39476d','#7990b2'],
-  ['#12354a','#285c70','#80aab0'],
-  ['#28223d','#574766','#ad8caa']
- ][chapter];
+ if(cx<camX-200||cx>camX+W+200)return;
+ const topW=28,midW=48,baseW=82,base=top+depth;
+ const drift=Math.sin(t*.72+cx*.01)*5.5,midShift=Math.sin(t*1.05+cx*.013)*7.5;
+ const leftBase=baseW+8,rightBase=baseW-10;
  ctx.save();
  if(!foreground){
-  // Carved ravine and distant waterfall source (visual only: do not add colliders).
-  for(const side of [-1,1]){
-   const edge=cx+side*w*.32,outer=cx+side*w*1.39;
-   const grad=ctx.createLinearGradient(edge,top,outer,bottom);
-   grad.addColorStop(0,palette[1]);grad.addColorStop(.50,palette[0]);grad.addColorStop(1,'#0a1b29');
-   ctx.fillStyle=grad;ctx.beginPath();
-   ctx.moveTo(cx+side*w*.23,top-22);
-   ctx.bezierCurveTo(cx+side*w*.37,top+depth*.16,cx+side*w*.43,top+depth*.38,cx+side*w*.43,bottom-17);
-   ctx.quadraticCurveTo(cx+side*w*.58,bottom+12,cx+side*w*1.36,bottom+25);
-   ctx.lineTo(cx+side*w*1.40,top+depth*.67);
-   ctx.bezierCurveTo(outer+side*13,top+depth*.41,outer-side*9,top+depth*.17,outer+side*14,top-38);
-   ctx.quadraticCurveTo(cx+side*w*.70,top-52,cx+side*w*.23,top-22);
-   ctx.closePath();ctx.fill();
-   // Stone strata break up the flat sidewalls and add wet reflections near the stream.
-   for(let j=0;j<13;j++){
-    const y=top+depth*(j+.35)/14;
-    const x=edge+side*(8+(j*17%45));
-    ctx.strokeStyle=j%3?'rgba(115,165,160,.13)':'rgba(181,231,212,.21)';
-    ctx.lineWidth=j%4===0?2:1;ctx.beginPath();
-    ctx.moveTo(x,y);ctx.quadraticCurveTo(x+side*(18+j%3*8),y+6,x+side*(30+j%4*10),y+17);
-    ctx.stroke();
-   }
-  }
-  const gap=35+Math.abs(seed)*8;
-  // Upstream ledge: two nonmatching banks leave an actual opening for the water.
-  for(const side of [-1,1]){
-   const inside=cx+side*gap*.57,outer=cx+side*w*1.35;
-   ctx.fillStyle=palette[1];ctx.beginPath();
-   ctx.moveTo(inside,top+2);ctx.bezierCurveTo(cx+side*w*.65,top+4,outer,top-30,outer+side*23,top-62);
-   ctx.lineTo(outer+side*30,top-95);ctx.quadraticCurveTo(cx+side*w*.7,top-84,inside,top-20);
-   ctx.closePath();ctx.fill();
-   ctx.strokeStyle='rgba(145,216,210,.24)';ctx.lineWidth=2;
-   ctx.beginPath();ctx.moveTo(outer,top-29);ctx.quadraticCurveTo(cx+side*w*.7,top-5,inside,top+1);ctx.stroke();
-  }
- }else{
-  // Wet, irregular banks cross in front of the flowing edges; water appears inside the gorge.
-  for(const side of [-1,1]){
-   const x=cx+side*w*.35;
-   ctx.save();ctx.globalAlpha=.92;
-   const g=ctx.createLinearGradient(x,top,x+side*55,top+depth);
-   g.addColorStop(0,palette[2]);g.addColorStop(.3,palette[1]);g.addColorStop(1,palette[0]);
-   ctx.fillStyle=g;ctx.beginPath();
-   ctx.moveTo(x,top-9);
-   ctx.bezierCurveTo(x+side*9,top+depth*.16,x+side*17,top+depth*.37,x+side*12,top+depth*.59);
-   ctx.bezierCurveTo(x+side*18,top+depth*.76,x+side*28,bottom-27,x+side*42,bottom+9);
-   ctx.lineTo(x+side*61,bottom+16);
-   ctx.bezierCurveTo(x+side*43,top+depth*.70,x+side*43,top+depth*.36,x+side*50,top-12);
-   ctx.closePath();ctx.fill();
-   ctx.strokeStyle='rgba(186,243,232,.27)';ctx.lineWidth=1.4;ctx.beginPath();
-   ctx.moveTo(x+side*3,top+10);ctx.bezierCurveTo(x+side*12,top+depth*.34,x+side*10,top+depth*.7,x+side*31,bottom-6);ctx.stroke();
-   for(let i=0;i<9;i++){
-    const yy=top+depth*(i+.3)/10,xx=x+side*(19+i%3*8);
-    ctx.strokeStyle=i%2?'rgba(75,139,112,.46)':'rgba(99,177,149,.34)';
-    ctx.lineWidth=1.3;ctx.beginPath();ctx.moveTo(xx,yy);ctx.quadraticCurveTo(xx+side*5,yy+10,xx-side*2,yy+18);ctx.stroke();
-   }
-   ctx.restore();
-  }
-  // Receding pool; spray is handled by LiquidSystem, so this is not a flat blue rectangle.
-  ctx.save();ctx.globalCompositeOperation='screen';
-  const pool=ctx.createRadialGradient(cx,bottom,4,cx,bottom,w*.95);
-  pool.addColorStop(0,'rgba(165,237,244,.29)');
-  pool.addColorStop(.56,'rgba(92,199,219,.10)');
-  pool.addColorStop(1,'rgba(92,199,219,0)');
-  ctx.fillStyle=pool;ctx.beginPath();ctx.ellipse(cx,bottom,w*.96,30,0,0,TAU);ctx.fill();
-  for(let i=0;i<7;i++){
-   const xx=cx+(i-3)*w*.23,yy=bottom+Math.sin(t*.6+i)*3;
-   ctx.strokeStyle='rgba(195,252,250,'+(.13+.05*Math.sin(t+i))+')';ctx.lineWidth=1.7;
-   ctx.beginPath();ctx.ellipse(xx,yy,13+i%3*6,2.7,0,0,Math.PI);ctx.stroke();
-  }
-  ctx.restore();
+ // deep mist behind the stream so the fall sits in a ravine instead of on a flat wall
+ const gorge=ctx.createRadialGradient(cx+drift*0.3,top+depth*.44,18,cx+drift*0.3,top+depth*.44,190);
+ gorge.addColorStop(0,'rgba(118,196,204,.10)');gorge.addColorStop(.56,'rgba(52,111,124,.10)');gorge.addColorStop(1,'rgba(8,27,37,0)');
+ ctx.fillStyle=gorge;ctx.fillRect(cx-185,top-56,370,depth+128);
+ // asymmetrical left wall: thicker, lower, more rounded
+ let g=ctx.createLinearGradient(cx-158,0,cx-26,0);
+ g.addColorStop(0,'#102733');g.addColorStop(.5,'#173c46');g.addColorStop(1,'#2a5f69');
+ ctx.fillStyle=g;
+ ctx.beginPath();
+ ctx.moveTo(cx-168,base+74);
+ ctx.bezierCurveTo(cx-168,base+30,cx-150,top+depth*.88,cx-142,top+depth*.70);
+ ctx.bezierCurveTo(cx-132,top+depth*.52,cx-122,top+depth*.32,cx-104,top+62);
+ ctx.quadraticCurveTo(cx-92,top+30,cx-58,top+16);
+ ctx.lineTo(cx-36,top+20);
+ ctx.quadraticCurveTo(cx-42,top+56,cx-52,top+depth*.24);
+ ctx.bezierCurveTo(cx-65,top+depth*.52,cx-78,top+depth*.78,cx-108,base+22);
+ ctx.quadraticCurveTo(cx-122,base+52,cx-168,base+74);
+ ctx.closePath();ctx.fill();
+ // asymmetrical right wall: steeper and broken
+ g=ctx.createLinearGradient(cx+22,0,cx+162,0);
+ g.addColorStop(0,'#2b5b65');g.addColorStop(.44,'#173a45');g.addColorStop(1,'#0f2530');
+ ctx.fillStyle=g;
+ ctx.beginPath();
+ ctx.moveTo(cx+154,base+60);
+ ctx.bezierCurveTo(cx+146,base+24,cx+137,top+depth*.82,cx+124,top+depth*.62);
+ ctx.bezierCurveTo(cx+110,top+depth*.42,cx+96,top+depth*.24,cx+70,top+44);
+ ctx.quadraticCurveTo(cx+58,top+22,cx+34,top+12);
+ ctx.lineTo(cx+18,top+18);
+ ctx.quadraticCurveTo(cx+24,top+48,cx+34,top+depth*.20);
+ ctx.bezierCurveTo(cx+44,top+depth*.45,cx+56,top+depth*.70,cx+82,base+18);
+ ctx.quadraticCurveTo(cx+98,base+44,cx+154,base+60);
+ ctx.closePath();ctx.fill();
+ // broken stone lip where the water starts, no straight slot
+ const lip=ctx.createLinearGradient(cx-94,top-16,cx+86,top+28);
+ lip.addColorStop(0,'#29453f');lip.addColorStop(.36,'#739677');lip.addColorStop(1,'#34524a');
+ ctx.fillStyle=lip;
+ ctx.beginPath();
+ ctx.moveTo(cx-92,top+18);
+ ctx.quadraticCurveTo(cx-70,top+5,cx-44,top+6);
+ ctx.quadraticCurveTo(cx-16,top-8,cx+6,top+1);
+ ctx.quadraticCurveTo(cx+26,top-4,cx+52,top+10);
+ ctx.quadraticCurveTo(cx+68,top+13,cx+86,top+22);
+ ctx.lineTo(cx+70,top+34);
+ ctx.quadraticCurveTo(cx+34,top+20,cx+12,top+26);
+ ctx.quadraticCurveTo(cx-12,top+15,cx-36,top+24);
+ ctx.quadraticCurveTo(cx-62,top+18,cx-100,top+30);
+ ctx.closePath();ctx.fill();
+ // damp highlights hugging the stone instead of a clean artificial opening
+ ctx.save();ctx.globalCompositeOperation='screen';
+ for(let i=0;i<7;i++){
+  const lx=cx-64+i*19+(i%2?3:-2),ly=top+8+Math.sin(i*1.3)*2.3;
+  ctx.fillStyle='rgba(184,255,236,.16)';ctx.beginPath();ctx.ellipse(lx,ly,8,2.3,.18,0,TAU);ctx.fill();
+ }
+ ctx.restore();
+ }
+ else {
+ // side dribbles and wet seams along the rocks
+ ctx.save();ctx.globalCompositeOperation='screen';
+ for(let i=0;i<5;i++){
+  const x1=cx-44-i*9,y1=top+30+i*22;
+  ctx.strokeStyle='rgba(194,246,243,.16)';ctx.lineWidth=1.4;
+  ctx.beginPath();ctx.moveTo(x1,y1);ctx.quadraticCurveTo(x1-6,y1+18,x1-2,y1+42);ctx.stroke();
+ }
+ for(let i=0;i<4;i++){
+  const x2=cx+38+i*8,y2=top+34+i*24;
+  ctx.strokeStyle='rgba(194,246,243,.14)';ctx.lineWidth=1.2;
+  ctx.beginPath();ctx.moveTo(x2,y2);ctx.quadraticCurveTo(x2+5,y2+17,x2+1,y2+39);ctx.stroke();
+ }
+ ctx.restore();
+ // splash and pool: uneven, spread out, and tied to the landing zone
+ ctx.save();ctx.globalCompositeOperation='screen';
+ for(let i=0;i<28;i++){
+  const life=(t*(18+i%6*8)+i*19.7)%92;
+  const px=cx+Math.sin(i*2.4)*(20+life*.58)+midShift*0.15,py=base+8-life*.55+Math.cos(i*1.7)*5;
+  ctx.fillStyle=`rgba(228,255,255,${(1-life/92)*(.08+(i%4)*.05)})`;ctx.beginPath();ctx.arc(px,py,1.1+(i%5)*.35,0,TAU);ctx.fill();
+ }
+ const splash=ctx.createRadialGradient(cx+midShift*0.12,base,4,cx+midShift*0.12,base,96);
+ splash.addColorStop(0,'rgba(220,255,255,.34)');splash.addColorStop(.45,'rgba(165,241,247,.18)');splash.addColorStop(1,'rgba(165,241,247,0)');
+ ctx.fillStyle=splash;ctx.fillRect(cx-116,base-54,232,108);
+ for(let i=0;i<7;i++){
+  const arcx=cx+(i-3)*22+Math.sin(t*.9+i)*4;
+  ctx.strokeStyle=`rgba(200,255,248,${.09+.04*Math.sin(t+i)})`;ctx.lineWidth=1.7;
+  ctx.beginPath();ctx.ellipse(arcx,base+8+Math.sin(t*.6+i)*2.5,12+i%3*7,2.8,0,0,Math.PI);ctx.stroke();
+ }
+ ctx.restore();
+ // front rocks overlap the lower edges so the water sits inside the terrain, not in front of it
+ ctx.fillStyle='rgba(13,31,38,.58)';
+ ctx.beginPath();
+ ctx.moveTo(cx-126,base+58);ctx.lineTo(cx-102,base+18);ctx.lineTo(cx-76,base+3);ctx.lineTo(cx-22,base+8);
+ ctx.quadraticCurveTo(cx-46,base+26,cx-58,base+56);ctx.closePath();ctx.fill();
+ ctx.beginPath();
+ ctx.moveTo(cx+118,base+60);ctx.lineTo(cx+94,base+18);ctx.lineTo(cx+70,base+4);ctx.lineTo(cx+16,base+10);
+ ctx.quadraticCurveTo(cx+44,base+30,cx+58,base+60);ctx.closePath();ctx.fill();
  }
  ctx.restore();
 }
