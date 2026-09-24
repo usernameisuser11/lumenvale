@@ -1223,10 +1223,10 @@ function paintPlatformArt(s){
 }
 const _drawWorldBase = drawWorld;
 drawWorld = function(){ctx.save();ctx.translate(-camX+(shake?(random()-.5)*shake:0),-camY+(shake?(random()-.5)*shake:0));
- drawWorldArt();water();
+ drawWorldArt();OpeningTerrain.backdrop();water();
  for(let c=0;c<CHAPTERS;c++)for(const fall of [[832,378,296],[1549,359,310],[2468,387,265],[3910,340,311],[4750,354,330]]){const x=fall[0]+c*CHAPTER,depth=fallLanding(x,fall[1],fall[2])-fall[1];fallRockGeometry(x,fall[1],depth,false);waterfall(x,fall[1],depth)}
  for(const b of bosses){if(b.x>camX-250&&b.x<camX+W+250)drawBossSetpiece(b)}
- for(const s of platforms){platformDraw(s);paintPlatformArt(s)}for(let c=0;c<CHAPTERS;c++)for(const fall of [[832,378,296],[1549,359,310],[2468,387,265],[3910,340,311],[4750,354,330]]){const x=fall[0]+c*CHAPTER,depth=fallLanding(x,fall[1],fall[2])-fall[1];fallRockGeometry(x,fall[1],depth,true)}for(const s of platforms){if(s.obelisk&&!(s.x>camX+W+80||s.x+s.w<camX-80))drawAncientMarker(s)}forestFlora();deco();
+ for(const s of platforms){platformDraw(s);paintPlatformArt(s)}for(let c=0;c<CHAPTERS;c++)for(const fall of [[832,378,296],[1549,359,310],[2468,387,265],[3910,340,311],[4750,354,330]]){const x=fall[0]+c*CHAPTER,depth=fallLanding(x,fall[1],fall[2])-fall[1];fallRockGeometry(x,fall[1],depth,true)}for(const s of platforms){if(s.obelisk&&!(s.x>camX+W+80||s.x+s.w<camX-80))drawAncientMarker(s)}forestFlora();deco();OpeningTerrain.foreground();
  for(const s of shards){if(s.x+s.w<camX||s.x>camX+W)continue;glow(s.x+s.w/2,s.y,35,'rgba(240,97,167,ALPHA)',.21);for(let x=s.x;x<s.x+s.w;x+=12){const h=11+Math.sin(x*.19)*5;ctx.fillStyle='#8b315c';ctx.beginPath();ctx.moveTo(x,s.y+10);ctx.bezierCurveTo(x-1,s.y+h*.5,x+7,s.y-h-2,x+9,s.y-h);ctx.quadraticCurveTo(x+8,s.y-h*.33,x+12,s.y+10);ctx.fill();ctx.strokeStyle='#ec89bc78';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(x+6,s.y+3);ctx.quadraticCurveTo(x+5,s.y-h*.35,x+8,s.y-h*.78);ctx.stroke()}}
  for(const altar of shrines){if(altar.done||altar.x<camX-100||altar.x>camX+W+100)continue;const x=altar.x,y=549;glow(x,y-48,94,'rgba(239,210,118,ALPHA)',.25);if(artReady.shrine){ctx.drawImage(artAssets.shrine,x-55,y-135,110,155)}else{ctx.strokeStyle='#abdbbcb0';ctx.lineWidth=5;ctx.beginPath();ctx.ellipse(x,y-37,19,34,0,0,TAU);ctx.stroke()}ctx.fillStyle='#e8fbd2';ctx.font='bold 13px sans-serif';ctx.textAlign='center';ctx.fillText('✦ 성장 제단',x,y-110)}
  for(const cp of checkpoints){if(cp.x<camX-30||cp.x>camX+W+30)continue;drawRunedCheckpoint(cp)}
@@ -2038,6 +2038,116 @@ updateProjectiles=function(dt){prevSwordUpdate(dt);SwordImpactSystem.step(dt)};
 const prevSwordDrawEffects=drawCombatEffects;
 drawCombatEffects=function(){prevSwordDrawEffects();SwordImpactSystem.draw()};
 // ==== end v3.1 ====
+
+
+// v4.0 — the first forest traversal is authored as rooms, not a repeating platform strip.
+const OpeningTerrain=(()=>{
+ const pieces=[
+  [225,564,111,22,'root'],[347,532,100,20,'root'],
+  [469,498,118,22,'root'],[599,478,87,19,'root'],
+  [690,521,111,24,'root'],[828,548,94,20,'root'],
+  [940,479,109,23,'hollow'],
+  [802,371,86,18,'secret'],[902,330,84,18,'secret']
+ ];
+ let groundAdjusted=false;
+ function build(){
+  if(!groundAdjusted){
+   const ix=grounds.findIndex(g=>g[0]===0&&g[1]===720);
+   if(ix<0)throw Error('Opening floor not found');
+   grounds.splice(ix,1,[0,405],[472,720]);groundAdjusted=true;
+  }
+  platforms=platforms.filter(s=>!((s.ground&&s.x===0&&s.w===720)||
+    (!s.ground&&!s.obelisk&&[275,522,711,920].some(x=>Math.abs(s.x-x)<.1))));
+  platforms.push({x:0,y:610,w:405,h:130,ground:1});
+  platforms.push({x:472,y:610,w:248,h:130,ground:1});
+  for(const [x,y,w,h,terrainType] of pieces)platforms.push({x,y,w,h,terrainType});
+  // Keep collectible indices stable for v3 saved games.
+  for(const [oldX,x,y] of [[365,395,481],[606,648,424],[775,751,471],[1020,998,425]]){
+   const l=lights.find(v=>Math.abs(v.x-oldX)<.1);
+   if(l){l.x=x;l.y=y}
+  }
+ }
+ function draw(s){
+  if(s.x>camX+W+75||s.x+s.w<camX-75)return;
+  const x=s.x,y=s.y,w=s.w,root=s.terrainType==='root';
+  ctx.save();
+  const g=ctx.createLinearGradient(x,y-9,x+w,y+33);
+  if(root){g.addColorStop(0,'#326357');g.addColorStop(.52,'#214a44');g.addColorStop(1,'#0c303b')}
+  else{g.addColorStop(0,'#5c856b');g.addColorStop(.47,'#345e5a');g.addColorStop(1,'#162f40')}
+  ctx.shadowColor='rgba(5,24,29,.65)';ctx.shadowBlur=12;ctx.fillStyle=g;
+  ctx.beginPath();ctx.moveTo(x-4,y+7);
+  ctx.bezierCurveTo(x+w*.15,y-8,x+w*.3,y+2,x+w*.49,y-4);
+  ctx.bezierCurveTo(x+w*.73,y-8,x+w*.84,y-3,x+w+4,y+7);
+  ctx.bezierCurveTo(x+w*.85,y+16,x+w*.69,y+22,x+w*.51,y+17);
+  ctx.bezierCurveTo(x+w*.30,y+24,x+w*.17,y+21,x-4,y+7);
+  ctx.closePath();ctx.fill();ctx.shadowBlur=0;
+  ctx.lineCap='round';
+  for(let i=0;i<3;i++){
+   ctx.strokeStyle=root?'rgba(163,232,171,.33)':'rgba(164,244,223,.33)';
+   ctx.lineWidth=i===0?2.2:1.1;
+   ctx.beginPath();ctx.moveTo(x+6,y+2+i*4);
+   ctx.bezierCurveTo(x+w*.27,y-8+i*4,x+w*.62,y+7+i*2,x+w-5,y+3+i*4);ctx.stroke();
+  }
+  for(let i=0;i<4;i++){
+   const q=x+12+i*w*.245,len=root?17+(i*13+Math.floor(x))%31:14+i*6;
+   ctx.strokeStyle=root?'#1a5147':'#376a57';ctx.lineWidth=root?5-i*.55:2.2;
+   ctx.beginPath();ctx.moveTo(q,y+12);ctx.bezierCurveTo(q+(i%2?7:-8),y+20,q-5,y+len*.6,q+3,y+len);ctx.stroke();
+  }
+  ctx.restore();
+ }
+ function backdrop(){
+  if(camX>1320)return;
+  ctx.save();
+  // The tree's open heart is passable; no solid rectangular facade is painted.
+  const bark=ctx.createLinearGradient(925,130,1240,615);
+  bark.addColorStop(0,'#32574e');bark.addColorStop(.42,'#1c4140');bark.addColorStop(1,'#092232');
+  ctx.fillStyle=bark;
+  ctx.beginPath();ctx.moveTo(936,615);
+  ctx.bezierCurveTo(930,475,934,310,977,208);
+  ctx.bezierCurveTo(1006,141,1039,98,1075,51);
+  ctx.bezierCurveTo(1034,188,1016,290,1020,341);
+  ctx.bezierCurveTo(1000,420,990,524,1005,616);ctx.closePath();ctx.fill();
+  ctx.beginPath();ctx.moveTo(1138,616);
+  ctx.bezierCurveTo(1170,505,1158,378,1145,292);
+  ctx.bezierCurveTo(1127,178,1100,110,1075,51);
+  ctx.bezierCurveTo(1205,155,1247,380,1255,616);ctx.closePath();ctx.fill();
+  // Distinct branching limbs and bark striations replace a squared-off cave opening.
+  ctx.lineCap='round';
+  for(const [a,b,c,d,e,f,width] of [
+   [1008,313,988,224,887,182,29],[1160,334,1186,195,1312,135,36],
+   [1030,215,1051,143,1013,79,19],[1140,217,1125,147,1192,89,17]
+  ]){
+   ctx.strokeStyle='#1c403e';ctx.lineWidth=width;
+   ctx.beginPath();ctx.moveTo(a,b);ctx.quadraticCurveTo(c,d,e,f);ctx.stroke();
+   ctx.strokeStyle='rgba(133,211,155,.15)';ctx.lineWidth=width*.17;ctx.stroke();
+  }
+  // The first crooked root physically corresponds to the stepping-stone climb.
+  ctx.lineWidth=27;ctx.strokeStyle='#183f3a';
+  ctx.beginPath();ctx.moveTo(170,638);
+  ctx.bezierCurveTo(267,586,315,554,381,559);
+  ctx.bezierCurveTo(487,545,582,483,711,564);ctx.stroke();
+  ctx.lineWidth=3;ctx.strokeStyle='rgba(137,227,176,.27)';ctx.stroke();
+  ctx.restore();
+ }
+ function foreground(){
+  if(camX>1320)return;
+  ctx.save();ctx.strokeStyle='rgba(24,66,54,.57)';ctx.lineCap='round';
+  for(const [x,y,h,k] of [[958,276,74,1],[1185,261,87,-1],[1077,143,50,1]]){
+   ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(x,y);
+   ctx.bezierCurveTo(x+14*k,y+h*.28,x-7*k,y+h*.69,x+9*k,y+h);ctx.stroke();
+   for(let j=1;j<=3;j++)artLeaf(ctx,x+9*k+Math.sin(j)*4,y+h*j/4,6,3,j*.51,'#46846a');
+  }
+  ctx.restore();
+ }
+ return {build,draw,backdrop,foreground,pieces};
+})();
+const makeWorldV4Base=makeWorld;
+makeWorld=function(){makeWorldV4Base();OpeningTerrain.build()};
+const platformDrawV4Base=platformDraw;
+platformDraw=function(s){if(s.terrainType)return OpeningTerrain.draw(s);return platformDrawV4Base(s)};
+const paintPlatformArtV4Base=paintPlatformArt;
+paintPlatformArt=function(s){if(s.terrainType)return;return paintPlatformArtV4Base(s)};
+// v4.0 terrain pilot complete.
 
 reset();requestAnimationFrame(frame);
 window.__LUMENVALE_TEST__={getState:()=>({mode,x:p.x,y:p.y,hp:p.hp,maxHp:p.maxHp,speed:p.speed,pulseRadius:p.pulseRadius,collected,goal:GOAL,level:upgradeCount+1,playSeconds,chapter:Math.min(CHAPTERS,Math.floor(p.x/CHAPTER)+1),palette:paletteAtProgress(camX/CHAPTER),cameraX:camX,platforms:platforms.length,lights:lights.length,checkpoints:checkpoints.length,shrines:shrines.length,artReady:{...artReady},weaponIndex,kills,shots:shots.length,enemyShots:enemyShots.length,musicOn,musicVolume,enemyKinds:[...new Set(enemies.map(e=>e.kind))],essence,skills:{...skillLevels},bosses:bosses.map(b=>({name:b.name,x:b.x,hp:b.hp,alive:b.alive,pattern:b.pattern,intent:b.intent}))}),getBosses:()=>bosses.map(b=>({name:b.name,x:b.x,y:b.y,hp:b.hp,alive:b.alive,windup:b.windup,pattern:b.pattern,intent:b.intent,kind:b.kind})),getCombat:()=>({enemies:enemies.filter(e=>e.alive).slice(0,16).map(e=>({x:e.x,y:e.y,hp:e.hp,kind:e.kind,windup:e.windup,attackTime:e.attackTime})),shots:shots.length,enemyShots:enemyShots.length,kills,pHp:p.hp}),start:play,attack:playerAttack,setWeapon:(n)=>setWeapon(n),step:(n=1)=>{for(let i=0;i<n;i++)step(1/60)},setInput,teleport:(x,y=520)=>{p.x=x;p.y=y;p.vy=0;p.vx=0;p.inv=2},chooseUpgrade};
