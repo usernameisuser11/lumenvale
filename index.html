@@ -1223,7 +1223,7 @@ function paintPlatformArt(s){
 }
 const _drawWorldBase = drawWorld;
 drawWorld = function(){ctx.save();ctx.translate(-camX+(shake?(random()-.5)*shake:0),-camY+(shake?(random()-.5)*shake:0));
- drawWorldArt();OpeningTerrain.backdrop();water();
+ drawWorldArt();LumenvaleVisualV5.drawWorldSetpieces();OpeningTerrain.backdrop();water();
  for(let c=0;c<CHAPTERS;c++)for(const fall of [[832,378,296],[1549,359,310],[2468,387,265],[3910,340,311],[4750,354,330]]){const x=fall[0]+c*CHAPTER,depth=fallLanding(x,fall[1],fall[2])-fall[1];fallRockGeometry(x,fall[1],depth,false);waterfall(x,fall[1],depth)}
  for(const b of bosses){if(b.x>camX-250&&b.x<camX+W+250)drawBossSetpiece(b)}
  for(const s of platforms){platformDraw(s);paintPlatformArt(s)}for(let c=0;c<CHAPTERS;c++)for(const fall of [[832,378,296],[1549,359,310],[2468,387,265],[3910,340,311],[4750,354,330]]){const x=fall[0]+c*CHAPTER,depth=fallLanding(x,fall[1],fall[2])-fall[1];fallRockGeometry(x,fall[1],depth,true)}for(const s of platforms){if(s.obelisk&&!(s.x>camX+W+80||s.x+s.w<camX-80))drawAncientMarker(s)}forestFlora();deco();OpeningTerrain.foreground();
@@ -2148,6 +2148,316 @@ platformDraw=function(s){if(s.terrainType)return OpeningTerrain.draw(s);return p
 const paintPlatformArtV4Base=paintPlatformArt;
 paintPlatformArt=function(s){if(s.terrainType)return;return paintPlatformArtV4Base(s)};
 // v4.0 terrain pilot complete.
+
+
+// ==== v5.0 ORIGINAL LUMINOUS FANTASY VISUAL OVERHAUL ====
+// Inspired by painterly cinematic platformers without copying any specific scene or asset.
+const LumenvaleVisualV5=(()=>{
+ const biome=[
+  {name:'verdant',deep:'#071d2b',mid:'#123d45',land:'#173b3b',rim:'#8ee7c0',glow:'#b9ffd7',accent:'#68c89c'},
+  {name:'wildwood',deep:'#0c251f',mid:'#244c3c',land:'#294838',rim:'#d0ee92',glow:'#efffb0',accent:'#8dc66c'},
+  {name:'moonruin',deep:'#0c1231',mid:'#26365b',land:'#26334f',rim:'#c3ceff',glow:'#e0e8ff',accent:'#7e96d6'},
+  {name:'cascade',deep:'#07192d',mid:'#16445b',land:'#173849',rim:'#9defff',glow:'#d8ffff',accent:'#58bbce'},
+  {name:'sanctum',deep:'#15112e',mid:'#3a2852',land:'#352a48',rim:'#efc7ff',glow:'#ffe4ff',accent:'#b487ce'}
+ ];
+ function chapterOf(x=camX+W*.5){return clamp(Math.floor(x/CHAPTER),0,4)}
+ function colors(x){return biome[chapterOf(x)]}
+ function rng(n){return (Math.sin(n*12.9898+78.233)*43758.5453)%1}
+ function noise(n){const v=rng(n);return v<0?v+1:v}
+ function screenWorldX(wx,rate){return wx-camX*rate}
+ function fogRibbon(y,amp,width,color,alpha,phase){
+  ctx.save();ctx.globalCompositeOperation='screen';ctx.globalAlpha=alpha;
+  ctx.strokeStyle=color;ctx.lineCap='round';ctx.lineWidth=width;
+  ctx.beginPath();ctx.moveTo(-120,y);
+  for(let x=0;x<=W+160;x+=90)ctx.quadraticCurveTo(x+45,y+Math.sin(t*.12+phase+x*.005)*amp,x+90,y+Math.sin(t*.09+phase+x*.004)*amp*.55);
+  ctx.stroke();ctx.restore();
+ }
+ function drawFarCanopy(){
+  const c=colors(),chapter=chapterOf();
+  ctx.save();
+  // layered distant masses: large shapes, not repeated wallpaper tiles
+  for(let layer=0;layer<3;layer++){
+   const rate=.035+layer*.035, base=390-layer*54,alpha=.16+layer*.08;
+   ctx.fillStyle=rgbaHex(layer===0?c.deep:c.mid,alpha);
+   ctx.beginPath();ctx.moveTo(-80,H);
+   for(let i=-1;i<=9;i++){
+    const world=(Math.floor(camX/420)*420)+i*430;
+    const sx=world-camX*rate;
+    const h=110+noise(i+chapter*31+layer*17)*170;
+    const w=130+noise(i*1.7+layer)*120;
+    ctx.bezierCurveTo(sx-w*.7,base-h*.15,sx-w*.35,base-h,sx,base-h);
+    ctx.bezierCurveTo(sx+w*.35,base-h,sx+w*.75,base-h*.1,sx+w,base+20);
+   }
+   ctx.lineTo(W+80,H);ctx.closePath();ctx.fill();
+  }
+  ctx.restore();
+ }
+ function drawCathedralTrees(){
+  const chapter=chapterOf(),c=colors();
+  if(chapter>1)return;
+  ctx.save();ctx.globalAlpha=chapter===0?.46:.30;ctx.lineCap='round';
+  const rate=.11;
+  for(let i=-1;i<6;i++){
+   const wx=Math.floor(camX/620)*620+i*620+170+noise(i+chapter*14)*180;
+   const x=wx-camX*rate;
+   const root=H+45,top=35+noise(i*3.2)*90;
+   const wid=48+noise(i*7.3)*55;
+   ctx.strokeStyle=rgbaHex(c.land,.88);ctx.lineWidth=wid;
+   ctx.beginPath();ctx.moveTo(x,root);ctx.bezierCurveTo(x-wid*.25,420,x+wid*.22,220,x+noise(i)*24-12,top);ctx.stroke();
+   ctx.strokeStyle=rgbaHex(c.rim,.09);ctx.lineWidth=Math.max(3,wid*.08);ctx.stroke();
+   for(let b=0;b<3;b++){
+    const yy=120+b*92+noise(i+b)*34,side=b%2?1:-1;
+    ctx.strokeStyle=rgbaHex(c.land,.82);ctx.lineWidth=14-b*2;
+    ctx.beginPath();ctx.moveTo(x,yy+55);ctx.quadraticCurveTo(x+side*(80+b*22),yy,x+side*(155+b*24),yy-16);ctx.stroke();
+   }
+  }
+  ctx.restore();
+ }
+ function drawRuinsSilhouette(){
+  if(chapterOf()!==2)return;
+  const c=colors();ctx.save();ctx.globalAlpha=.34;
+  const rate=.16,origin=Math.floor(camX/900)*900;
+  for(let j=-1;j<3;j++){
+   const x=origin+j*900-camX*rate+170;
+   ctx.strokeStyle=rgbaHex(c.land,.92);ctx.lineCap='round';ctx.lineWidth=34;
+   ctx.beginPath();ctx.moveTo(x-112,H+30);ctx.lineTo(x-112,260);
+   ctx.quadraticCurveTo(x,138,x+112,260);ctx.lineTo(x+112,H+30);ctx.stroke();
+   ctx.strokeStyle=rgbaHex(c.rim,.14);ctx.lineWidth=3;ctx.stroke();
+   ctx.fillStyle=rgbaHex(c.mid,.55);ctx.beginPath();ctx.moveTo(x-150,600);ctx.lineTo(x-95,410);ctx.lineTo(x-62,600);ctx.closePath();ctx.fill();
+   ctx.beginPath();ctx.moveTo(x+78,600);ctx.lineTo(x+123,380);ctx.lineTo(x+158,600);ctx.closePath();ctx.fill();
+  }
+  ctx.restore();
+ }
+ function drawCascadeCliffs(){
+  if(chapterOf()!==3)return;
+  const c=colors();ctx.save();ctx.globalAlpha=.42;
+  for(let side of [-1,1]){
+   ctx.fillStyle=rgbaHex(c.land,.86);ctx.beginPath();
+   const x=side<0?-90:W+90;
+   ctx.moveTo(x,H);ctx.lineTo(x,220);
+   ctx.bezierCurveTo(x-side*70,250,x-side*145,310,x-side*175,410);
+   ctx.bezierCurveTo(x-side*120,448,x-side*82,505,x-side*65,H);ctx.closePath();ctx.fill();
+   ctx.strokeStyle=rgbaHex(c.rim,.08);ctx.lineWidth=2;ctx.stroke();
+  }
+  for(let i=0;i<4;i++){
+   const x=150+i*225-camX*.025;
+   const beam=ctx.createLinearGradient(x,120,x,510);beam.addColorStop(0,rgbaHex(c.rim,0));beam.addColorStop(.45,rgbaHex(c.rim,.09));beam.addColorStop(1,rgbaHex(c.rim,0));
+   ctx.fillStyle=beam;ctx.fillRect(x,110,18,410);
+  }
+  ctx.restore();
+ }
+ function drawSanctumArcs(){
+  if(chapterOf()!==4)return;
+  const c=colors();ctx.save();ctx.globalCompositeOperation='screen';ctx.globalAlpha=.42;
+  const x=W*.68-camX*.018,y=225;
+  for(let r=210;r>=105;r-=42){
+   ctx.strokeStyle=rgbaHex(c.rim,.12+(210-r)*.0005);ctx.lineWidth=10-(210-r)*.018;
+   ctx.beginPath();ctx.arc(x,y,r,.12*Math.PI,1.88*Math.PI);ctx.stroke();
+  }
+  const core=ctx.createRadialGradient(x,y,0,x,y,125);core.addColorStop(0,rgbaHex(c.glow,.12));core.addColorStop(1,rgbaHex(c.glow,0));ctx.fillStyle=core;ctx.fillRect(x-130,y-130,260,260);
+  ctx.restore();
+ }
+ function drawBackground(){
+  drawFarCanopy();drawCathedralTrees();drawRuinsSilhouette();drawCascadeCliffs();drawSanctumArcs();
+  const c=colors();
+  fogRibbon(345,18,38,c.glow,.035,0);
+  fogRibbon(410,13,55,c.rim,.04,2.1);
+  ctx.save();ctx.globalCompositeOperation='screen';
+  for(let i=0;i<38;i++){
+   const x=((i*83.7-camX*(.04+(i%4)*.015)+t*(i%2?2.1:-1.4))%(W+90)+W+90)%(W+90)-45;
+   const y=80+(i*47)%385+Math.sin(t*.35+i)*8;
+   const a=.035+(i%5)*.018;
+   ctx.fillStyle=rgbaHex(i%6===0?'#ffe7ad':c.glow,a);ctx.beginPath();ctx.arc(x,y,i%9===0?2.2:1.1,0,TAU);ctx.fill();
+  }
+  ctx.restore();
+ }
+ function platformPath(s){
+  const x=s.x,y=s.y,w=s.w,h=s.h,bottom=y+h;
+  ctx.beginPath();
+  ctx.moveTo(x-3,y+7);
+  const step=Math.max(9,Math.min(18,w/8));
+  for(let xx=0;xx<=w;xx+=step){
+   const n=Math.sin((x+xx)*.057)*2.8+Math.sin((x+xx)*.139)*1.3;
+   ctx.lineTo(x+Math.min(xx,w),y+n);
+  }
+  ctx.lineTo(x+w+4,Math.min(bottom,y+22));
+  if(s.ground){
+   ctx.bezierCurveTo(x+w+10,y+60,x+w-18,bottom-12,x+w-5,bottom);
+   ctx.lineTo(x+5,bottom);ctx.bezierCurveTo(x+12,bottom-48,x-9,y+58,x-3,y+7);
+  }else{
+   for(let xx=w;xx>=0;xx-=Math.max(14,step*1.25)){
+    const d=12+Math.abs(Math.sin((x+xx)*.071))*Math.min(34,h+18);
+    ctx.lineTo(x+xx,Math.min(bottom,y+d));
+   }
+   ctx.closePath();
+  }
+ }
+ function drawPlatform(s){
+  if(s.x>camX+W+90||s.x+s.w<camX-90)return;
+  const idx=clamp(Math.floor(s.x/CHAPTER),0,4),c=biome[idx],x=s.x,y=s.y,w=s.w;
+  ctx.save();
+  const grad=ctx.createLinearGradient(x,y-14,x+w,y+Math.min(120,s.h+30));
+  grad.addColorStop(0,c.mid);grad.addColorStop(.18,c.land);grad.addColorStop(.78,c.deep);grad.addColorStop(1,'#061522');
+  ctx.fillStyle=grad;ctx.shadowColor='rgba(0,11,18,.55)';ctx.shadowBlur=s.ground?15:10;platformPath(s);ctx.fill();ctx.shadowBlur=0;
+  // broken moss/rim rather than a glowing straight rectangle
+  ctx.strokeStyle=rgbaHex(c.rim,s.ground?.35:.52);ctx.lineWidth=s.ground?2.1:1.8;ctx.lineCap='round';
+  ctx.beginPath();
+  for(let xx=5;xx<w-4;xx+=10){
+   const yy=y-2+Math.sin((x+xx)*.11)*2.4+Math.cos((x+xx)*.031);
+   if(xx===5)ctx.moveTo(x+xx,yy);else ctx.lineTo(x+xx,yy);
+  }
+  ctx.stroke();
+  // biome-specific material detail
+  if(idx<=1){
+   for(let i=0;i<Math.floor(w/37);i++){
+    const xx=x+12+i*37+noise(x+i)*9,len=10+(i*11)%29;
+    ctx.strokeStyle=i%3?rgbaHex(c.accent,.52):rgbaHex(c.rim,.28);ctx.lineWidth=1.4+(i%2);
+    ctx.beginPath();ctx.moveTo(xx,y+5);ctx.bezierCurveTo(xx-5,y+len*.3,xx+7,y+len*.75,xx+Math.sin(i)*5,y+len);ctx.stroke();
+    if(i%3===0)artLeaf(ctx,xx+3,y+len*.55,5,2.4,.65,c.accent);
+   }
+  }else if(idx===2){
+   for(let i=0;i<Math.floor(w/44);i++){
+    const xx=x+16+i*44;ctx.strokeStyle=rgbaHex(c.rim,.19);ctx.lineWidth=1.3;ctx.beginPath();ctx.moveTo(xx,y+8);ctx.lineTo(xx+8,y+22);ctx.lineTo(xx+1,y+36);ctx.stroke();
+   }
+  }else if(idx===3){
+   for(let i=0;i<Math.floor(w/52);i++){
+    const xx=x+12+i*52;ctx.strokeStyle=rgbaHex(c.rim,.18);ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(xx,y+8);ctx.quadraticCurveTo(xx-4,y+24,xx+3,y+45);ctx.stroke();
+   }
+  }else{
+   for(let i=0;i<Math.floor(w/55);i++){
+    const xx=x+18+i*55;ctx.strokeStyle=rgbaHex(c.rim,.24);ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(xx,y+17,7+(i%3)*3,.1,Math.PI*1.7);ctx.stroke();
+   }
+  }
+  // soft contact shadow under the rim adds painterly depth
+  const shade=ctx.createLinearGradient(0,y+4,0,y+34);shade.addColorStop(0,'rgba(0,10,18,.48)');shade.addColorStop(1,'rgba(0,10,18,0)');ctx.fillStyle=shade;ctx.fillRect(x,y+5,w,30);
+  ctx.restore();
+ }
+ function drawPlatformDetail(s){
+  if(s.x>camX+W+70||s.x+s.w<camX-70||s.obelisk)return;
+  const idx=clamp(Math.floor(s.x/CHAPTER),0,4),c=biome[idx];
+  ctx.save();ctx.globalCompositeOperation='screen';
+  if(idx===0||idx===1){
+   for(let i=0;i<Math.floor(s.w/78);i++){
+    const x=s.x+24+i*78+noise(s.x+i)*18,y=s.y-5;
+    glow(x,y-8,18,rgbaHex(c.glow,'ALPHA'),.08+(i%3)*.025);
+    ctx.fillStyle=rgbaHex(c.glow,.38);ctx.beginPath();ctx.arc(x,y-8,1.4,0,TAU);ctx.fill();
+   }
+  }else if(idx===2){
+   for(let i=0;i<Math.floor(s.w/100);i++){const x=s.x+35+i*100;ctx.strokeStyle=rgbaHex(c.rim,.14);ctx.lineWidth=1.2;ctx.beginPath();ctx.moveTo(x,s.y+2);ctx.lineTo(x+9,s.y+9);ctx.lineTo(x+1,s.y+18);ctx.stroke()}
+  }else if(idx===3){
+   for(let i=0;i<Math.floor(s.w/90);i++){const x=s.x+28+i*90;glow(x,s.y-3,23,rgbaHex(c.glow,'ALPHA'),.07)}
+  }else{
+   for(let i=0;i<Math.floor(s.w/115);i++){const x=s.x+45+i*115;glow(x,s.y-5,30,rgbaHex(c.glow,'ALPHA'),.06)}
+  }
+  ctx.restore();
+ }
+ function drawFlora(){
+  const idx=chapterOf(p?p.x:camX),c=biome[idx];
+  const left=camX-35,right=camX+W+35;
+  for(const s of platforms){
+   if(s.x>right||s.x+s.w<left||s.obelisk)continue;
+   const count=Math.max(1,Math.floor(s.w/(idx===0?44:idx===1?39:58)));
+   for(let i=0;i<count;i++){
+    const x=s.x+12+(i+0.35)*s.w/count+Math.sin((s.x+i)*.031)*7,y=s.y;
+    if(x<left||x>right)continue;
+    const seed=Math.floor(x*.13)+i*17;
+    if(idx<=1){
+     const h=10+seed%22,lean=Math.sin(seed)*8;
+     ctx.strokeStyle=rgbaHex(c.accent,.72);ctx.lineWidth=1.35;ctx.beginPath();ctx.moveTo(x,y);ctx.quadraticCurveTo(x+lean*.4,y-h*.55,x+lean,y-h);ctx.stroke();
+     if(seed%3===0){artLeaf(ctx,x+lean*.55,y-h*.6,5.2,2.4,.7,c.rim);artLeaf(ctx,x+lean*.15,y-h*.38,4.5,2.2,-.7,c.accent)}
+     if(seed%7===0){glow(x+lean,y-h,18,rgbaHex(c.glow,'ALPHA'),.12);ctx.fillStyle=rgbaHex(c.glow,.65);ctx.beginPath();ctx.arc(x+lean,y-h,1.8,0,TAU);ctx.fill()}
+    }else if(idx===2&&seed%3===0){
+     ctx.strokeStyle=rgbaHex(c.accent,.40);ctx.lineWidth=1.2;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+3,y-16);ctx.stroke();ctx.fillStyle=rgbaHex(c.rim,.25);ctx.beginPath();ctx.ellipse(x+3,y-18,4,2,.2,0,TAU);ctx.fill();
+    }else if(idx===3&&seed%4===0){
+     ctx.fillStyle=rgbaHex(c.rim,.19);ctx.beginPath();ctx.ellipse(x,y-5,8,2.7,-.2,0,TAU);ctx.fill();glow(x,y-5,15,rgbaHex(c.glow,'ALPHA'),.07);
+    }else if(idx===4&&seed%3===0){
+     ctx.strokeStyle=rgbaHex(c.rim,.25);ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+Math.sin(seed)*6,y-19);ctx.stroke();glow(x,y-20,13,rgbaHex(c.glow,'ALPHA'),.07);
+    }
+   }
+  }
+ }
+ function drawWorldSetpieces(){
+  const chapter=chapterOf(p?p.x:camX),c=biome[chapter];
+  // world-space giant landmarks are sparse and unique per chapter
+  const base=chapter*CHAPTER;
+  ctx.save();
+  if(chapter===0){
+   for(const x of [base+1180,base+3370]){
+    if(x<camX-500||x>camX+W+500)continue;
+    ctx.strokeStyle='#143a37';ctx.lineWidth=70;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(x,650);ctx.bezierCurveTo(x-85,510,x+55,335,x-35,140);ctx.stroke();
+    ctx.strokeStyle=rgbaHex(c.rim,.10);ctx.lineWidth=6;ctx.stroke();
+   }
+  }else if(chapter===1){
+   for(const x of [base+1620,base+3840]){
+    if(x<camX-450||x>camX+W+450)continue;
+    ctx.strokeStyle='#304638';ctx.lineWidth=42;ctx.beginPath();ctx.moveTo(x-115,612);ctx.lineTo(x-115,350);ctx.quadraticCurveTo(x,220,x+115,350);ctx.lineTo(x+115,612);ctx.stroke();
+    ctx.strokeStyle=rgbaHex(c.rim,.12);ctx.lineWidth=3;ctx.stroke();
+   }
+  }else if(chapter===2){
+   for(const x of [base+1350,base+3430]){
+    if(x<camX-450||x>camX+W+450)continue;
+    ctx.fillStyle='#1e2945';ctx.beginPath();ctx.moveTo(x-145,610);ctx.lineTo(x-70,330);ctx.lineTo(x-20,286);ctx.lineTo(x+18,348);ctx.lineTo(x+87,255);ctx.lineTo(x+148,610);ctx.closePath();ctx.fill();
+    ctx.strokeStyle=rgbaHex(c.rim,.11);ctx.lineWidth=2;ctx.stroke();
+   }
+  }else if(chapter===3){
+   for(const x of [base+1750,base+3640]){
+    if(x<camX-450||x>camX+W+450)continue;
+    ctx.fillStyle='#103244';ctx.beginPath();ctx.moveTo(x-170,612);ctx.bezierCurveTo(x-135,480,x-95,390,x-48,318);ctx.quadraticCurveTo(x,270,x+35,322);ctx.bezierCurveTo(x+87,397,x+128,492,x+172,612);ctx.closePath();ctx.fill();
+   }
+  }else{
+   for(const x of [base+1550,base+3550]){
+    if(x<camX-500||x>camX+W+500)continue;
+    ctx.strokeStyle='#3e3153';ctx.lineWidth=24;ctx.beginPath();ctx.arc(x,330,126,.2*Math.PI,1.8*Math.PI);ctx.stroke();
+    ctx.strokeStyle=rgbaHex(c.rim,.12);ctx.lineWidth=4;ctx.stroke();
+   }
+  }
+  ctx.restore();
+ }
+ function drawForeground(){
+  const c=colors();
+  ctx.save();
+  // near silhouettes create depth but leave the center lane readable
+  const grad=ctx.createLinearGradient(0,0,W,0);
+  grad.addColorStop(0,'rgba(2,10,15,.42)');grad.addColorStop(.17,'rgba(2,10,15,.08)');
+  grad.addColorStop(.5,'rgba(2,10,15,0)');grad.addColorStop(.83,'rgba(2,10,15,.08)');grad.addColorStop(1,'rgba(2,10,15,.38)');
+  ctx.fillStyle=grad;ctx.fillRect(0,0,W,H);
+  ctx.globalCompositeOperation='screen';
+  for(let i=0;i<14;i++){
+   const x=(i*79+t*(i%2?4:-3))%(W+60)-30,y=H-80-(i*41)%210;
+   glow(x,y,10,rgbaHex(c.glow,'ALPHA'),.10+(i%4)*.025);
+  }
+  ctx.restore();
+  // vignette is softer and cinematic, not a black tunnel.
+  ctx.save();
+  const v=ctx.createRadialGradient(W*.5,H*.46,120,W*.5,H*.48,620);
+  v.addColorStop(0,'rgba(0,0,0,0)');v.addColorStop(.74,'rgba(1,7,12,.04)');v.addColorStop(1,'rgba(1,5,10,.27)');
+  ctx.fillStyle=v;ctx.fillRect(0,0,W,H);ctx.restore();
+ }
+ return {drawBackground,drawPlatform,drawPlatformDetail,drawFlora,drawWorldSetpieces,drawForeground,chapterOf,colors};
+})();
+
+const backBeforeVisualV5=back;
+back=function(){backBeforeVisualV5();LumenvaleVisualV5.drawBackground()};
+
+const platformDrawBeforeVisualV5=platformDraw;
+platformDraw=function(s){
+ // Keep special obelisks authored by their own renderer; everything else gets the organic shell.
+ if(s.obelisk)return platformDrawBeforeVisualV5(s);
+ return LumenvaleVisualV5.drawPlatform(s);
+};
+
+const paintPlatformArtBeforeVisualV5=paintPlatformArt;
+paintPlatformArt=function(s){
+ if(s.obelisk)return paintPlatformArtBeforeVisualV5(s);
+ LumenvaleVisualV5.drawPlatformDetail(s);
+};
+
+const forestFloraBeforeVisualV5=forestFlora;
+forestFlora=function(){LumenvaleVisualV5.drawFlora()};
+
+const drawForegroundBeforeVisualV5=drawForeground;
+drawForeground=function(){drawForegroundBeforeVisualV5();LumenvaleVisualV5.drawForeground()};
+// ==== end v5.0 visual overhaul ====
 
 reset();requestAnimationFrame(frame);
 window.__LUMENVALE_TEST__={getState:()=>({mode,x:p.x,y:p.y,hp:p.hp,maxHp:p.maxHp,speed:p.speed,pulseRadius:p.pulseRadius,collected,goal:GOAL,level:upgradeCount+1,playSeconds,chapter:Math.min(CHAPTERS,Math.floor(p.x/CHAPTER)+1),palette:paletteAtProgress(camX/CHAPTER),cameraX:camX,platforms:platforms.length,lights:lights.length,checkpoints:checkpoints.length,shrines:shrines.length,artReady:{...artReady},weaponIndex,kills,shots:shots.length,enemyShots:enemyShots.length,musicOn,musicVolume,enemyKinds:[...new Set(enemies.map(e=>e.kind))],essence,skills:{...skillLevels},bosses:bosses.map(b=>({name:b.name,x:b.x,hp:b.hp,alive:b.alive,pattern:b.pattern,intent:b.intent}))}),getBosses:()=>bosses.map(b=>({name:b.name,x:b.x,y:b.y,hp:b.hp,alive:b.alive,windup:b.windup,pattern:b.pattern,intent:b.intent,kind:b.kind})),getCombat:()=>({enemies:enemies.filter(e=>e.alive).slice(0,16).map(e=>({x:e.x,y:e.y,hp:e.hp,kind:e.kind,windup:e.windup,attackTime:e.attackTime})),shots:shots.length,enemyShots:enemyShots.length,kills,pHp:p.hp}),start:play,attack:playerAttack,setWeapon:(n)=>setWeapon(n),step:(n=1)=>{for(let i=0;i<n;i++)step(1/60)},setInput,teleport:(x,y=520)=>{p.x=x;p.y=y;p.vy=0;p.vx=0;p.inv=2},chooseUpgrade};
